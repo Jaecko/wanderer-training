@@ -1,0 +1,44 @@
+## Interface: 16001
+## Title: Wanderer Training
+## Notes: What your trainers have for you, in a tab of your spellbook: class spells, weapon skills, demon tomes, and what they will cost now, at the next level and up to the last.
+## Notes-frFR: Ce que vos maîtres vous réservent, dans un onglet de votre grimoire : sorts de classe, compétences d'armes, grimoires de démon, et ce qu'ils coûteront maintenant, au prochain niveau et jusqu'au dernier.
+## Notes-deDE: Was eure Lehrer für euch haben, in einem Reiter eures Zauberbuchs: Klassenzauber, Waffenfertigkeiten, Dämonenfolianten, und was sie jetzt, auf der nächsten Stufe und bis zur letzten kosten.
+## Notes-esES: Lo que tus instructores tienen para ti, en una pestaña de tu libro de hechizos: hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
+## Notes-esMX: Lo que tus instructores tienen para ti, en una pestaña de tu libro de hechizos: hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
+## Notes-itIT: Ciò che i tuoi istruttori hanno per te, in una scheda del tuo libro degli incantesimi: incantesimi di classe, abilità con le armi, tomi demoniaci, e quanto costeranno ora, al prossimo livello e fino all'ultimo.
+## Notes-ptBR: O que seus instrutores têm para você, numa aba do seu grimório: feitiços de classe, perícias com armas, tomos demoníacos, e quanto vão custar agora, no próximo nível e até o último.
+## Notes-ruRU: Чему вас научат наставники, во вкладке книги заклинаний: заклинания класса, навыки владения оружием, фолианты демонов и сколько они будут стоить сейчас, на следующем уровне и до последнего.
+## Notes-koKR: 숙련가가 가르쳐 줄 것을 주문서의 탭에서: 직업 주문, 무기 숙련, 악마 마법서, 그리고 지금, 다음 레벨, 마지막 레벨까지의 비용.
+## Notes-zhCN: 在法术书的一个标签中查看训练师能教你什么：职业法术、武器技能、恶魔典籍，以及现在、下一级和直到最后一级的费用。
+## Notes-zhTW: 在法術書的一個標籤中查看訓練師能教你什麼：職業法術、武器技能、惡魔典籍，以及現在、下一級和直到最後一級的費用。
+## Category: Class
+## Version: 0.1.0
+## Author: Jaekco
+## IconTexture: Interface\Icons\INV_Misc_Book_07
+## RequiredDeps: Wanderer
+## SavedVariablesPerCharacter: WandererTrainingDB
+## X-License: GPL-3.0-or-later
+## X-Website: https://wanderer-addon.com
+
+Locales.lua
+Locales\[TextLocale].lua
+Data.lua
+Data\WhatsTraining\Druid.lua
+Data\WhatsTraining\Hunter.lua
+Data\WhatsTraining\Mage.lua
+Data\WhatsTraining\Paladin.lua
+Data\WhatsTraining\Priest.lua
+Data\WhatsTraining\Rogue.lua
+Data\WhatsTraining\Shaman.lua
+Data\WhatsTraining\Warlock.lua
+Data\WhatsTraining\Warrior.lua
+Data\WhatsTraining\QuestSpells.lua
+Data\WhatsTraining\TrainerFactions.lua
+Data\WhatsTraining\WarlockTomes.lua
+Data\Weapons.lua
+Data\Places.lua
+Specs.lua
+Training.lua
+Pins.lua
+Page.lua
+Book.lua

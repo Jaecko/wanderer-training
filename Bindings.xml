@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="WANDERERTRAINING_TOGGLE" header="WANDERERTRAINING">
+		WandererTraining_Toggle()
+	</Binding>
+</Bindings>
