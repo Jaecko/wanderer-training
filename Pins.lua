@@ -8,36 +8,21 @@ local U = W and W.Util
 
 local SIDES = { Alliance = "A", Horde = "H" }
 
--- A world position on the closest map the game has for it: map, x, y (0 to 1), or nil.
-local function MapPoint(continent, x, y)
-	if not (C_Map and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return nil end
-	local ok, map, position = pcall(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(x, y))
-	if not (ok and map and position) then return nil end
-	-- (the zone under it, for a closer map)
-	local info = C_Map.GetMapInfoAtPosition and select(2, pcall(C_Map.GetMapInfoAtPosition, map, position.x, position.y))
-	if type(info) == "table" and info.mapID and info.mapID ~= map then
-		local okZone, zone, there = pcall(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(x, y), info.mapID)
-		if okZone and zone and there then return zone, there.x, there.y end
-	end
-	return map, position.x, position.y
-end
-
 -- The name of the place there (a city, a zone), for the words of a tooltip.
 function ns.PlaceName(continent, x, y)
-	local map = MapPoint(continent, x, y)
-	local info = map and C_Map.GetMapInfo and C_Map.GetMapInfo(map)
-	return info and info.name or nil
+	local map = U.WorldToMap(continent, x, y)
+	return map and U.MapName(map) or nil
 end
 
 local function Pin(place)
-	local map, x, y = MapPoint(place[3], place[4], place[5])
-	return map and U.Pin(map, x, y) or false
+	local map, x, y = U.WorldToMap(place[3], place[4], place[5])
+	return map and U.Go(map, x, y) or false
 end
 
 -- Where you stand in the world: continent, x, y (nil inside an instance).
 local function Here()
-	local x, y, _, continent = UnitPosition("player")
-	if not (x and y) or (continent ~= 0 and continent ~= 1) then return nil end
+	local x, y, continent = U.Here()
+	if not x or (continent ~= 0 and continent ~= 1) then return nil end
 	return continent, x, y
 end
 
@@ -57,10 +42,26 @@ local function Closest(places)
 	return best
 end
 
+-- A trainer of your class in the place you stand (the town card speaks of it only then): on your continent,
+-- and within NEAR_TRAINER yards (an inn with no trainer: none, never the capital's far away).
+local NEAR_TRAINER = 600
+function ns.ClassTrainerHere()
+	local place = Closest(ns.CLASS_TRAINERS[ns.class])
+	local continent, x, y = Here()
+	if not (place and continent and place[3] == continent) then return nil end
+	if (place[4] - x) ^ 2 + (place[5] - y) ^ 2 > NEAR_TRAINER * NEAR_TRAINER then return nil end
+	return place
+end
+
 -- The closest trainer of your class, pinned: true when the game took the pin.
+-- (none known for your side, Forever's Horde paladins or Alliance shamans: said so, rather than a failed pin)
 function ns.PinClassTrainer()
 	local place = Closest(ns.CLASS_TRAINERS[ns.class])
-	return place and Pin(place) or false
+	if not place then
+		W.Print(ns.L.PIN_NONE)
+		return true
+	end
+	return Pin(place)
 end
 
 -- A weapon master (the closest of those teaching it), pinned.
@@ -77,7 +78,8 @@ end
 -- A master's name (in your language when known) and where he stands.
 function ns.MasterText(npc)
 	local names = ns.MASTER_NAMES[npc] or {}
-	local name = names[GetLocale and GetLocale() or "enUS"] or names.enUS or ("#" .. npc)
+	local locale = GetLocale and GetLocale() or "enUS"
+	local name = names[locale] or (locale == "esMX" and names.esES) or names.enUS or ("#" .. npc)
 	local where = ns.MASTER_PLACES[npc]
 	local place = where and ns.PlaceName(where[2], where[3], where[4])
 	return place and (name .. " (" .. place .. ")") or name

@@ -9,26 +9,27 @@ local L = ns.L
 
 local W = Wanderer
 
--- The ways of each class: its key, its talent tree, and the words that name it (Wanderer's branch names).
+-- The ways of each class: its icon (its talent tree's), its key, its tree, and the words that name it (Wanderer's
+-- branch names).
 ns.WAYS = {
-	WARRIOR = { { key = "arms", tree = 1, branch = "ARMS" }, { key = "fury", tree = 2, branch = "FURY" },
-		{ key = "protection", tree = 3, branch = "PROTECTION" } },
-	PALADIN = { { key = "holy", tree = 1, branch = "HOLY" }, { key = "protection", tree = 2, branch = "PROTECTION" },
-		{ key = "retribution", tree = 3, branch = "RETRIBUTION" } },
-	HUNTER = { { key = "beast", tree = 1, branch = "BEAST_MASTERY" }, { key = "marks", tree = 2, branch = "MARKSMANSHIP" },
-		{ key = "survival", tree = 3, branch = "SURVIVAL" } },
-	ROGUE = { { key = "assassination", tree = 1, branch = "ASSASSINATION" }, { key = "combat", tree = 2, branch = "COMBAT" },
-		{ key = "subtlety", tree = 3, branch = "SUBTLETY" } },
-	PRIEST = { { key = "discipline", tree = 1, branch = "DISCIPLINE" }, { key = "holy", tree = 2, branch = "HOLY" },
-		{ key = "shadow", tree = 3, branch = "SHADOW" } },
-	SHAMAN = { { key = "elemental", tree = 1, branch = "ELEMENTAL" }, { key = "enhancement", tree = 2, branch = "ENHANCEMENT" },
-		{ key = "restoration", tree = 3, branch = "RESTORATION" } },
-	MAGE = { { key = "arcane", tree = 1, branch = "ARCANE" }, { key = "fire", tree = 2, branch = "FIRE" },
-		{ key = "frost", tree = 3, branch = "FROST" } },
-	WARLOCK = { { key = "affliction", tree = 1, branch = "AFFLICTION" }, { key = "demonology", tree = 2, branch = "DEMONOLOGY" },
-		{ key = "destruction", tree = 3, branch = "DESTRUCTION" } },
-	DRUID = { { key = "balance", tree = 1, branch = "BALANCE" }, { key = "bear", tree = 2, branch = "FERAL", scale = "BEAR" },
-		{ key = "cat", tree = 2, branch = "FERAL", scale = "CAT" }, { key = "restoration", tree = 3, branch = "RESTORATION" } },
+	WARRIOR = { { icon = "Ability_Rogue_Eviscerate", key = "arms", tree = 1, branch = "ARMS" }, { icon = "Ability_Warrior_InnerRage", key = "fury", tree = 2, branch = "FURY" },
+		{ icon = "INV_Shield_06", key = "protection", tree = 3, branch = "PROTECTION" } },
+	PALADIN = { { icon = "Spell_Holy_HolyBolt", key = "holy", tree = 1, branch = "HOLY" }, { icon = "Spell_Holy_DevotionAura", key = "protection", tree = 2, branch = "PROTECTION" },
+		{ icon = "Spell_Holy_AuraOfLight", key = "retribution", tree = 3, branch = "RETRIBUTION" } },
+	HUNTER = { { icon = "Ability_Hunter_BeastTaming", key = "beast", tree = 1, branch = "BEAST_MASTERY" }, { icon = "Ability_Marksmanship", key = "marks", tree = 2, branch = "MARKSMANSHIP" },
+		{ icon = "Ability_Hunter_SwiftStrike", key = "survival", tree = 3, branch = "SURVIVAL" } },
+	ROGUE = { { icon = "Ability_Rogue_Eviscerate", key = "assassination", tree = 1, branch = "ASSASSINATION" }, { icon = "Ability_BackStab", key = "combat", tree = 2, branch = "COMBAT" },
+		{ icon = "Ability_Stealth", key = "subtlety", tree = 3, branch = "SUBTLETY" } },
+	PRIEST = { { icon = "Spell_Holy_WordFortitude", key = "discipline", tree = 1, branch = "DISCIPLINE" }, { icon = "Spell_Holy_HolyBolt", key = "holy", tree = 2, branch = "HOLY" },
+		{ icon = "Spell_Shadow_ShadowWordPain", key = "shadow", tree = 3, branch = "SHADOW" } },
+	SHAMAN = { { icon = "Spell_Nature_Lightning", key = "elemental", tree = 1, branch = "ELEMENTAL" }, { icon = "Spell_Nature_LightningShield", key = "enhancement", tree = 2, branch = "ENHANCEMENT" },
+		{ icon = "Spell_Nature_MagicImmunity", key = "restoration", tree = 3, branch = "RESTORATION" } },
+	MAGE = { { icon = "Spell_Holy_MagicalSentry", key = "arcane", tree = 1, branch = "ARCANE" }, { icon = "Spell_Fire_FireBolt02", key = "fire", tree = 2, branch = "FIRE" },
+		{ icon = "Spell_Frost_FrostBolt02", key = "frost", tree = 3, branch = "FROST" } },
+	WARLOCK = { { icon = "Spell_Shadow_DeathCoil", key = "affliction", tree = 1, branch = "AFFLICTION" }, { icon = "Spell_Shadow_Metamorphosis", key = "demonology", tree = 2, branch = "DEMONOLOGY" },
+		{ icon = "Spell_Shadow_RainOfFire", key = "destruction", tree = 3, branch = "DESTRUCTION" } },
+	DRUID = { { icon = "Spell_Nature_StarFall", key = "balance", tree = 1, branch = "BALANCE" }, { icon = "Ability_Racial_BearForm", key = "bear", tree = 2, branch = "FERAL", scale = "BEAR" },
+		{ icon = "Ability_Druid_CatForm", key = "cat", tree = 2, branch = "FERAL", scale = "CAT" }, { icon = "Spell_Nature_HealingTouch", key = "restoration", tree = 3, branch = "RESTORATION" } },
 }
 
 -- The spells of one way (or a few) only, by their first rank: every later rank follows it.
@@ -45,7 +46,7 @@ ns.ONLY = {
 		[5209] = { "bear" }, [22842] = { "bear" }, [9634] = { "bear" }, [414644] = { "bear" }, -- Challenging Roar, Frenzied Regeneration, Dire Bear Form, Lacerate
 		[5221] = { "cat" }, [1822] = { "cat" }, [1850] = { "cat" }, [3029] = { "cat" }, [1082] = { "cat" }, [8998] = { "cat" }, -- Shred, Rake, Dash, Claw, Cower
 		[9492] = { "cat" }, [1079] = { "cat" }, [22568] = { "cat" }, [6785] = { "cat" }, [5225] = { "cat" }, [9005] = { "cat" }, -- Rip, Ferocious Bite, Ravage, Track Humanoids, Pounce
-		[6783] = { "cat" }, [5215] = { "cat" }, [20719] = { "cat" }, [5217] = { "cat" }, -- Prowl, Feline Grace, Tiger's Fury
+		[6783] = { "cat" }, [5215] = { "cat" }, [20719] = { "cat" }, -- Prowl, Feline Grace
 		[740] = { "restoration" }, -- Tranquility
 	},
 	HUNTER = { [19434] = { "marks" }, [19506] = { "marks" }, [20909] = { "survival" } }, -- Aimed Shot, Trueshot Aura, Counterattack
@@ -113,30 +114,62 @@ function ns.SeedWays()
 	db.ways = ns.FromPlayChoice()
 end
 
--- The first rank of a spell: earlier ranks followed (a required spell of the same name), the same for every rank.
-local roots = {}
-function ns.Root(spell)
-	local id = spell.id
-	if roots[id] then return roots[id] end
-	local root, current, steps = id, spell, 0
-	-- (the names not loaded yet: the spell itself for now, asked again later)
-	if not (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(id)) then return id end
-	while current and current.requiredIds and steps < 30 do
-		local name = C_Spell.GetSpellName(current.id)
-		local before
-		for _, required in ipairs(current.requiredIds) do
-			local other = ns.byId[required]
-			if other and name and C_Spell.GetSpellName(required) == name then before = other end
+-- The first rank of a spell: the earliest spell of your class bearing its name (every rank, those taught by a
+-- quest included, under one key). Kept once every name is read; read again until then (once a moment).
+local byName, complete, readAt
+function ns.ForgetRoots() byName, complete, readAt = nil, false, nil end
+
+-- A spell's family name: its rank taken off when the name carries it (a Roman numeral, a word in brackets).
+local function Family(name)
+	name = name:gsub("%s*%b()$", ""):gsub("%s*（.-）$", "")
+	return (name:gsub("%s+[IVX]+$", ""))
+end
+
+local function Roots()
+	local now = GetTime and GetTime() or 0
+	if complete or (byName and readAt == now) then return byName end
+	local map, missing = {}, false
+	for id, spell in pairs(ns.byId) do
+		local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(id)
+		if name then
+			name = Family(name)
+			local best = map[name]
+			if not best or spell.level < best.level or (spell.level == best.level and id < best.id) then map[name] = spell end
+		else
+			missing = true
 		end
-		if not before then break end
-		root, current, steps = before.id, before, steps + 1
 	end
-	roots[id] = root
-	return root
+	byName, complete, readAt = map, not missing, now
+	return map
+end
+
+function ns.Root(spell)
+	-- (the name not loaded yet: the spell itself for now)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spell.id)
+	if not name then return spell.id end
+	local first = Roots()[Family(name)]
+	return first and first.id or spell.id
+end
+
+-- What a spell is worth to each way of your class (Data/Useful.lua): { "way"..., first = { "way"... }, all = true },
+-- nil when the table does not know it (a spell of Forever's own: worth it for everyone).
+local function Rule(spell)
+	local useful = ns.USEFUL and ns.USEFUL[ns.class]
+	if not useful then return nil, false end
+	local root = ns.Root(spell)
+	return useful[root] or useful[spell.id], true, root
 end
 
 -- The ways a spell serves: { key = true }, or nil for every way.
 function ns.SpellWays(spell)
+	local rule, known = Rule(spell)
+	if known then
+		if not rule or rule.all then return nil end
+		local ways = {}
+		for _, key in ipairs(rule) do ways[key] = true end
+		for _, key in ipairs(rule.first or {}) do ways[key] = true end
+		return next(ways) and ways or {}
+	end
 	local only = ns.ONLY[ns.class]
 	local root = ns.Root(spell)
 	local list = only and (only[root] or only[spell.id])
@@ -149,8 +182,44 @@ end
 -- Whether a spell is of what you play (everything, before any choice).
 function ns.InMyWays(spell)
 	local chosen = ns.Chosen()
+	if not chosen then return true end
+	-- The table of what each way needs: every rank for some ways, only the first for others, nothing for the rest.
+	local rule, known, root = Rule(spell)
+	if known then
+		if not rule or rule.all then return true end
+		for _, key in ipairs(rule) do if chosen[key] then return true end end
+		if root == spell.id then
+			for _, key in ipairs(rule.first or {}) do if chosen[key] then return true end end
+		end
+		return false
+	end
 	local ways = ns.SpellWays(spell)
 	if not (chosen and ways) then return true end
 	for key in pairs(ways) do if chosen[key] then return true end end
 	return false
+end
+
+-- Why a spell is outside what you play, in one line (nil: it is of what you play, counted anyway, or nothing
+-- chosen yet): one rank enough for your ways, or the ways it serves.
+function ns.Reason(id)
+	local spell = ns.byId[id]
+	local chosen = ns.Chosen()
+	if not (spell and chosen) or ns.InMyWays(spell) or ns.DB().counted[ns.Root(spell)] then return nil end
+	local rule, known, root = Rule(spell)
+	local serving = {}
+	if known and rule then
+		for _, key in ipairs(rule.first or {}) do
+			if chosen[key] and root ~= spell.id then return L.REASON_FIRST end
+		end
+		for _, key in ipairs(rule) do serving[key] = true end
+		if root == spell.id then for _, key in ipairs(rule.first or {}) do serving[key] = true end end
+	else
+		for key in pairs(ns.SpellWays(spell) or {}) do serving[key] = true end
+	end
+	local names = {}
+	for _, way in ipairs(ns.Ways()) do
+		if serving[way.key] then names[#names + 1] = ns.WayName(way) end
+	end
+	if not names[1] then return L.REASON_NONE end
+	return L.REASON_OTHER:format(table.concat(names, ", "))
 end

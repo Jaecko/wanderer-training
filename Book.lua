@@ -1,35 +1,55 @@
 local ADDON, ns = ...
 local L = ns.L
 
--- Where the page is shown: a tab of the game's spellbook (beside its own, as What's Training does), opened by
--- Wanderer's menu, a key or /wtraining; or, when the spellbook cannot be opened (in a fight), a window of its
--- own. The launcher's word pulses while something that counts can be learned now; a short notice at a new
--- level (an option, off).
+-- Where the page is shown: Training's own window, always (Wanderer's look), opened by Wanderer's bar and menu, a
+-- key, /wtraining, or the button on the game's spellbook (where its tab was: beside the book's own tabs, as What's
+-- Training's; the book itself is never opened nor touched, the game loads it, never this addon). The launcher's
+-- word pulses while something that counts can be learned now; a short notice at a new level (an option, off).
 
 local W = Wanderer
 local U = W and W.Util
 local Skin = W and W.Skin
 
 local ICON = "Interface\\Icons\\INV_Misc_Book_07"
-local HEAD = 58 -- the page's heading in the spellbook
 
-local overlay, launcher, window
-local trainerOpen = false
+local launcher, window
 local attention = false
 
-local function Settings() return W and W.Settings and W.Settings("training") or nil end
+local Settings = ns.Settings
 
 -- Drawn again a moment after a change (many come at once); the launcher's word kept in step.
 local function Refresh()
 	if not ns.class then return end
-	attention = ns.Build().sums.now.count > 0
+	attention = ns.Build().sums.trainer.count > 0
 	ns.Draw()
+	ns.DrawTrainer()
 end
-local refresh = U and U.Debounce and U.Debounce(0.2, Refresh) or Refresh
-function ns.Changed() refresh() end
+-- (made in Init, once Wanderer is known to be recent enough)
+local refresh, redraw
+function ns.Changed()
+	ns.Invalidate()
+	if refresh then refresh() end
+end
 
 function ns.Attention() return attention end
-function ns.AtClassTrainer() return trainerOpen and #ns.TrainerServices() > 0 end
+
+-- Under the launcher's word: what waits at your trainer now, then at the next level that brings something.
+-- Lines { text, role } (also .text, .role).
+local function Line(text, role) return { text, role, text = text, role = role } end
+function ns.Summary()
+	if not ns.class then return nil end
+	local model = ns.Build()
+	local now, lines = model.sums.trainer, {}
+	if now.count > 0 then
+		lines[1] = Line(L.SUMMARY_NOW:format(now.count, U.Coins(now.price)), "text")
+	else
+		lines[1] = Line(L.SUMMARY_NOTHING, "muted")
+	end
+	if model.next and model.sums.next.count > 0 then
+		lines[2] = Line(L.SUMMARY_NEXT:format(model.next, model.sums.next.count, U.Coins(model.sums.next.price)), "soft")
+	end
+	return lines
+end
 
 -- The window of its own -------------------------------------------------------------------------------------------
 
@@ -37,32 +57,30 @@ local function Window()
 	if window then return window end
 	window = Skin.CreateWindow("WandererTrainingWindow", "MEDIUM")
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 20 }, "trainingPos")
-	window:SetSize(720, 680)
-	local _, _, margin = Skin.Header(window, "Wanderer", L.HEADING)
-	window.margin = margin
+	window:SetSize(960, 720)
+	-- (the page says what it is in the heading: "Wanderer", then what your trainers have for you)
+	local _, _, margin = ns.Header(window, L.HEADING)
+	window.content = CreateFrame("Frame", nil, window)
+	window.content:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -(margin + 40))
+	window.content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -margin, margin)
 	window:HookScript("OnShow", function(self)
-		self:SetScale(Skin.Scale())
-		ns.PlacePage(self, margin + 44, margin)
+		self:SetScale(Skin.FitScale(self))
+		ns.PlacePage(self.content)
+		if launcher then launcher.active:Show() launcher.normal:Hide() end
+	end)
+	window:HookScript("OnHide", function()
+		if launcher then launcher.active:Hide() launcher.normal:Show() end
 	end)
 	Skin.Get(window):Layout()
 	return window
 end
 
--- The spellbook's tab -----------------------------------------------------------------------------------------------
+-- The spellbook's button ----------------------------------------------------------------------------------------
+-- Where the tab was, beside the book's own tabs (and What's Training's): a click opens or closes Training's
+-- window; lit while it is open.
 
 local function Book() return PlayerSpellsFrame and PlayerSpellsFrame.SpellBookFrame end
 
-local function ShowOverlay(on)
-	if not overlay then return end
-	overlay:SetShown(on)
-	if launcher then launcher.active:SetShown(on) launcher.normal:SetShown(not on) end
-	if on then
-		if window then window:Hide() end
-		ns.PlacePage(overlay.content, 0, 0)
-	end
-end
-
--- The tab, beside the book's own (and What's Training's when it is there).
 local function PlaceLauncher()
 	local book = Book()
 	local tabs = book and book.CategoryTabSystem
@@ -87,27 +105,8 @@ end
 
 local function Attach()
 	local book = Book()
-	if overlay or not book then return end
-	-- The page over the book, with its heading.
-	overlay = CreateFrame("Frame", "WandererTrainingBook", PlayerSpellsFrame)
-	overlay:SetAllPoints(book)
-	overlay:SetFrameLevel(book:GetFrameLevel() + 20)
-	overlay:EnableMouse(true)
-	overlay:Hide()
-	local ground = overlay:CreateTexture(nil, "BACKGROUND")
-	ground:SetAllPoints()
-	ground:SetColorTexture(0.06, 0.05, 0.04, 0.97)
-	local kicker = Skin.CreateKicker(overlay, "Wanderer")
-	overlay.content = CreateFrame("Frame", nil, overlay)
-	overlay.content:SetPoint("TOPLEFT", overlay, "TOPLEFT", 0, -HEAD)
-	overlay.content:SetPoint("BOTTOMRIGHT", overlay, "BOTTOMRIGHT", 0, 14)
-	local title = Skin.CreateText(overlay, "GameTooltipHeaderText", 1, 0.82, 0)
-	title:SetText(L.HEADING)
-	-- (the heading over the page's left edge, the page centered)
-	kicker:SetPoint("BOTTOMLEFT", overlay.content, "TOP", -330, 26)
-	title:SetPoint("TOPLEFT", kicker, "BOTTOMLEFT", 0, -3)
-	-- The tab.
-	launcher = CreateFrame("Button", "WandererTrainingLauncher", PlayerSpellsFrame)
+	if launcher or not book then return end
+	launcher = CreateFrame("Button", "WandererTrainingLauncher", book)
 	launcher:SetSize(44, 32)
 	launcher:SetFrameLevel(book:GetFrameLevel() + 25)
 	launcher.icon = launcher:CreateTexture(nil, "ARTWORK")
@@ -116,58 +115,35 @@ local function Attach()
 	launcher.icon:SetTexture(ICON)
 	launcher.normal = Art(launcher, "spellbook-Tab-Frame-C60")
 	launcher.active = Art(launcher, "spellbook-Tab-Frame-Glow-C60")
-	launcher.active:Hide()
+	local open = window ~= nil and window:IsShown()
+	launcher.active:SetShown(open)
+	launcher.normal:SetShown(not open)
 	launcher:SetScript("OnClick", function()
-		if U.PlaySound then U.PlaySound("IG_SPELLBOOK_OPEN") end
-		ShowOverlay(not overlay:IsShown())
+		Skin.Play("click")
+		ns.Toggle()
 	end)
 	Skin.Tooltip(launcher, L.TAB_TOOLTIP)
-	-- The book's own tabs take the page back; the book closed, the page goes with it.
-	local hooked = {}
-	local function HookTabs()
-		local tabs = book.CategoryTabSystem
-		for _, child in ipairs(tabs and { tabs:GetChildren() } or {}) do
-			if not hooked[child] and child.HookScript then
-				hooked[child] = true
-				child:HookScript("OnClick", function() ShowOverlay(false) end)
-			end
-		end
-		PlaceLauncher()
-	end
-	book:HookScript("OnShow", HookTabs)
-	book:HookScript("OnHide", function() ShowOverlay(false) end)
-	HookTabs()
+	book:HookScript("OnShow", PlaceLauncher)
+	PlaceLauncher()
+	ns.RefreshBook()
+end
+
+-- The button on the book only while Wanderer is on (off: nothing of Training on the game's windows).
+function ns.RefreshBook()
+	if launcher then launcher:SetShown(Settings() ~= nil) end
 end
 
 -- Opening ---------------------------------------------------------------------------------------------------------
 
-local function OpenBook()
-	if InCombatLockdown and InCombatLockdown() then return false end
-	if not Book() and C_AddOns and C_AddOns.LoadAddOn then pcall(C_AddOns.LoadAddOn, "Blizzard_PlayerSpells") end
-	if not Book() then return false end
-	Attach()
-	if not PlayerSpellsFrame:IsShown() then
-		if PlayerSpellsUtil and PlayerSpellsUtil.OpenToSpellBookTab then
-			pcall(PlayerSpellsUtil.OpenToSpellBookTab)
-		else
-			pcall(ShowUIPanel, PlayerSpellsFrame)
-		end
-	end
-	if not PlayerSpellsFrame:IsShown() then return false end
-	ShowOverlay(true)
-	return true
-end
-
+-- (always the window: nothing of the game's to open, so it comes in a fight too)
 function ns.Open()
 	if not ns.class then return end
-	if not OpenBook() then Window():Show() end
+	local made = Window()
+	if made:IsShown() then return Skin.Front and Skin.Front(made) end
+	made:Show()
 end
 
 function ns.Toggle()
-	if overlay and overlay:IsVisible() then
-		pcall(HideUIPanel, PlayerSpellsFrame)
-		return
-	end
 	if window and window:IsShown() then return window:Hide() end
 	ns.Open()
 end
@@ -181,57 +157,97 @@ function WandererTraining_Toggle() ns.Toggle() end
 -- A new level: what it brings, said briefly (an option).
 local function LevelUp(level)
 	local settings = Settings()
-	if not (settings and settings.remind and W.Toast) then return end
+	if not (settings and settings.remind) then return end
 	local sums = ns.Build(level).sums
-	if sums.now.count > 0 then W.Toast(L.TITLE, L.REMIND_TEXT:format(sums.now.count, ns.MoneyText(sums.now.price)), { duration = 6 }) end
+	if sums.trainer.count > 0 then W.Toast(L.TITLE, L.REMIND_TEXT:format(sums.trainer.count, U.Coins(sums.trainer.price)), { kicker = "Wanderer", duration = 6 }) end
 end
 
 function ns.Init()
 	if not (W and W.RegisterExtension) then return end
-	if (W.API or 1) < 6 then return W.Print(L.NEEDS_WANDERER) end
+	-- (built on Wanderer's API 15: an older Wanderer is only asked to update, nothing of it is called)
+	if (W.API or 1) < 15 then return W.Print(L.NEEDS_WANDERER) end
+	refresh = U.Debounce(0.2, Refresh)
+	redraw = U.Debounce(0.2, function() ns.Draw(true) end)
 	W.RegisterExtension({
 		key = "training",
 		addon = ADDON,
+		slash = "/wtraining",
 		title = L.ADDON,
 		news = L.NEWS_LINES,
-		defaults = { remind = false },
-		launcher = { label = L.TITLE, open = function() ns.Toggle() end, attention = function() return ns.Attention() end },
+		defaults = { remind = false, trainer = true, talentsReminder = true, naowhPanel = true, spellTips = true },
+		launcher = { label = L.TITLE, open = function() ns.Toggle() end, attention = function() return ns.Attention() end,
+			summary = function() return ns.Summary() end },
+		-- (Wanderer turned on or off: the book's button with it)
+		refresh = function() ns.RefreshBook() end,
+		-- (the trainers' window replaced: Wanderer's own "Learn all" at the trainer steps aside)
+		takes = { trainerWindow = function() local settings = Settings() return settings ~= nil and settings.trainer ~= false end },
+		-- (as every page: the essentials, the talent planner, the rest folded)
 		options = function(o)
-			o.Header(L.ADDON)
 			o.Button(L.TITLE, L.OPEN, L.OPEN_DESC, function()
 				o.CloseSettings()
 				ns.Open()
 			end)
+			local trainer = o.Checkbox("training", "trainer", L.TRAINER_OPTION, L.TRAINER_OPTION_DESC)
+			-- (only with Naowh Training there: its panel at the class trainer)
+			if ns.NaowhTraining() then
+				o.Under(o.Checkbox("training", "naowhPanel", L.NAOWH_PANEL, L.NAOWH_PANEL_DESC), trainer, o.IsOn("training", "trainer"))
+			end
+			o.Checkbox("training", "spellTips", L.SPELL_TIPS, L.SPELL_TIPS_DESC)
+
+			-- (both notices of a new level together: what your trainer has, the talent your plan takes)
+			o.Header(L.SECTION_AT_LEVEL)
 			o.Checkbox("training", "remind", L.REMIND, L.REMIND_DESC)
+			o.Checkbox("training", "talentsReminder", L.PLAN_REMIND, L.PLAN_REMIND_DESC)
+
+			o.Header(L.PLAN_TITLE)
+			o.Button(L.PLAN_TITLE, L.OPEN, L.PLAN_OPEN_DESC, function()
+				o.CloseSettings()
+				ns.ToggleTalents()
+			end)
+
+			o.Header(L.RANKS_KEPT_OPTION, { advanced = true })
+			o.Button(L.RANKS_KEPT_OPTION, L.RANKS_FORGET, L.RANKS_FORGET_DESC, function() ns.ForgetKeptRanks() end)
 		end,
 	})
 	SLASH_WANDERERTRAINING1 = "/wtraining"
 	SLASH_WANDERERTRAINING2 = "/wtrain"
-	SlashCmdList.WANDERERTRAINING = function() ns.Toggle() end
+	SlashCmdList.WANDERERTRAINING = function(text)
+		if (text or ""):lower():find("talent", 1, true) then return ns.ToggleTalents() end
+		ns.Toggle()
+	end
 	if W.OnComparisonChanged then W.OnComparisonChanged(ns.Changed) end
+	ns.InitTrainer()
+	ns.InitRanks()
+	ns.InitSpellTips()
 	local events = CreateFrame("Frame")
 	for _, event in ipairs({ "PLAYER_LOGIN", "SPELLS_CHANGED", "PLAYER_LEVEL_UP", "PLAYER_MONEY", "UPDATE_FACTION", "SKILL_LINES_CHANGED",
 		"SPELL_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED", "PET_BAR_UPDATE", "TRAINER_SHOW", "TRAINER_CLOSED", "TRAINER_UPDATE",
-		"CHARACTER_POINTS_CHANGED", "ADDON_LOADED" }) do
+		"CHARACTER_POINTS_CHANGED", "TRAIT_CONFIG_UPDATED", "ADDON_LOADED" }) do
 		pcall(events.RegisterEvent, events, event)
 	end
-	events:SetScript("OnEvent", function(_, event, arg)
+	events:SetScript("OnEvent", function(_, event, arg, ...)
+		-- (an item's data comes for every item of the game: only the demon tomes matter here)
+		if event == "GET_ITEM_INFO_RECEIVED" and not (ns.IsTome(arg) and (...) ~= false) then return end
+		if event == "SPELL_DATA_LOAD_RESULT" and not ns.Asked(arg) then return end
 		if event == "ADDON_LOADED" then
 			if arg == "Blizzard_PlayerSpells" then Attach() end
 			return
 		end
+		-- (your gold changed: the sums drawn again against it, nothing read again)
+		if event == "PLAYER_MONEY" then return redraw() end
 		if event == "PLAYER_LOGIN" then
 			ns.LoadCharacter()
 			ns.SeedWays()
 			if Book() then Attach() end
-		elseif event == "TRAINER_SHOW" then
-			trainerOpen = true
-		elseif event == "TRAINER_CLOSED" then
-			trainerOpen = false
 		elseif event == "PET_BAR_UPDATE" or event == "SPELLS_CHANGED" then
 			ns.NoteTomes()
 		elseif event == "PLAYER_LEVEL_UP" then
-			C_Timer.After(1, function() LevelUp(tonumber(arg)) end)
+			C_Timer.After(1, function()
+				LevelUp(tonumber(arg))
+				ns.TalentsAtLevel(tonumber(arg))
+			end)
+		elseif event == "CHARACTER_POINTS_CHANGED" or event == "TRAIT_CONFIG_UPDATED" then
+			ns.TalentsChanged()
 		end
 		ns.Changed()
 	end)

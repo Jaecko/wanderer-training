@@ -16,8 +16,7 @@ function ns.SpellsFor(class, side, race)
 	for level, spells in pairs(data and data.spellsByLevel or {}) do
 		for _, spell in ipairs(spells) do
 			local sideOk = spell.faction == nil or spell.faction == side
-			local raceOk = (spell.race == nil and spell.races == nil) or spell.race == race
-				or (spell.races ~= nil and (spell.races[1] == race or spell.races[2] == race))
+			local raceOk = spell.race == nil or spell.race == race
 			if sideOk and raceOk then
 				out[level] = out[level] or {}
 				out[level][#out[level] + 1] = spell

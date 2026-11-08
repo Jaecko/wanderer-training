@@ -1,18 +1,19 @@
 ## Interface: 16001
 ## Title: Wanderer Training
-## Notes: What your trainers have for you, in a tab of your spellbook: class spells, weapon skills, demon tomes, and what they will cost now, at the next level and up to the last.
-## Notes-frFR: Ce que vos maîtres vous réservent, dans un onglet de votre grimoire : sorts de classe, compétences d'armes, grimoires de démon, et ce qu'ils coûteront maintenant, au prochain niveau et jusqu'au dernier.
-## Notes-deDE: Was eure Lehrer für euch haben, in einem Reiter eures Zauberbuchs: Klassenzauber, Waffenfertigkeiten, Dämonenfolianten, und was sie jetzt, auf der nächsten Stufe und bis zur letzten kosten.
-## Notes-esES: Lo que tus instructores tienen para ti, en una pestaña de tu libro de hechizos: hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
-## Notes-esMX: Lo que tus instructores tienen para ti, en una pestaña de tu libro de hechizos: hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
-## Notes-itIT: Ciò che i tuoi istruttori hanno per te, in una scheda del tuo libro degli incantesimi: incantesimi di classe, abilità con le armi, tomi demoniaci, e quanto costeranno ora, al prossimo livello e fino all'ultimo.
-## Notes-ptBR: O que seus instrutores têm para você, numa aba do seu grimório: feitiços de classe, perícias com armas, tomos demoníacos, e quanto vão custar agora, no próximo nível e até o último.
-## Notes-ruRU: Чему вас научат наставники, во вкладке книги заклинаний: заклинания класса, навыки владения оружием, фолианты демонов и сколько они будут стоить сейчас, на следующем уровне и до последнего.
-## Notes-koKR: 숙련가가 가르쳐 줄 것을 주문서의 탭에서: 직업 주문, 무기 숙련, 악마 마법서, 그리고 지금, 다음 레벨, 마지막 레벨까지의 비용.
-## Notes-zhCN: 在法术书的一个标签中查看训练师能教你什么：职业法术、武器技能、恶魔典籍，以及现在、下一级和直到最后一级的费用。
-## Notes-zhTW: 在法術書的一個標籤中查看訓練師能教你什麼：職業法術、武器技能、惡魔典籍，以及現在、下一級和直到最後一級的費用。
+## Notes: What your trainers have for you, in a window of its own (a button on your spellbook): class spells, weapon skills, demon tomes, and what they will cost now, at the next level and up to the last.
+## Notes-frFR: Ce que vos maîtres vous réservent, dans sa propre fenêtre (un bouton sur votre grimoire) : sorts de classe, compétences d'armes, grimoires de démon, et ce qu'ils coûteront maintenant, au prochain niveau et jusqu'au dernier.
+## Notes-deDE: Was deine Lehrer für dich haben, in einem eigenen Fenster (ein Knopf an deinem Zauberbuch): Klassenzauber, Waffenfertigkeiten, Dämonenfolianten, und was sie jetzt, auf der nächsten Stufe und bis zur letzten kosten.
+## Notes-esES: Lo que tus instructores tienen para ti, en su propia ventana (un botón en tu libro de hechizos): hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
+## Notes-esMX: Lo que tus instructores tienen para ti, en su propia ventana (un botón en tu libro de hechizos): hechizos de clase, habilidades de armas, tomos de demonio, y lo que costarán ahora, en el próximo nivel y hasta el último.
+## Notes-itIT: Ciò che i tuoi istruttori hanno per te, in una finestra tutta sua (un pulsante sul tuo libro degli incantesimi): incantesimi di classe, abilità con le armi, tomi demoniaci, e quanto costeranno ora, al prossimo livello e fino all'ultimo.
+## Notes-ptBR: O que seus instrutores têm para você, numa janela própria (um botão no seu grimório): feitiços de classe, perícias com armas, tomos demoníacos, e quanto vão custar agora, no próximo nível e até o último.
+## Notes-ruRU: Чему вас научат наставники, в отдельном окне (кнопка на книге заклинаний): заклинания класса, навыки владения оружием, фолианты демонов и сколько они будут стоить сейчас, на следующем уровне и до последнего.
+## Notes-koKR: 숙련가가 가르쳐 줄 것을 전용 창에서 (주문서의 버튼): 직업 주문, 무기 숙련, 악마 마법서, 그리고 지금, 다음 레벨, 마지막 레벨까지의 비용.
+## Notes-zhCN: 在独立窗口中查看训练师能教你什么（法术书上有一个按钮）：职业法术、武器技能、恶魔典籍，以及现在、下一级和直到最后一级的费用。
+## Notes-zhTW: 在獨立視窗中查看訓練師能教你什麼（法術書上有一個按鈕）：職業法術、武器技能、惡魔典籍，以及現在、下一級和直到最後一級的費用。
 ## Category: Class
-## Version: 0.1.0
+## Version: 1.3.0
+## X-Curse-Project-ID: 1754440
 ## Author: Jaekco
 ## IconTexture: Interface\Icons\INV_Misc_Book_07
 ## RequiredDeps: Wanderer
@@ -37,8 +38,12 @@ Data\WhatsTraining\TrainerFactions.lua
 Data\WhatsTraining\WarlockTomes.lua
 Data\Weapons.lua
 Data\Places.lua
+Data\Useful.lua
 Specs.lua
 Training.lua
 Pins.lua
 Page.lua
+Talents.lua
+Trainer.lua
 Book.lua
+Town.lua
