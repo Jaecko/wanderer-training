@@ -1,132 +1,39 @@
 local _, ns = ...
 local L = ns.L
 
--- Your talents planned, point by point, in the order you will take them: the three branches of your class side
--- by side as the game's talent window draws them, read from the game itself (Wanderer's TalentTree). A click
--- adds the next point to a talent (as the game would allow it: five points in a branch for each row, the talent
--- an arrow comes from full first, 51 points in all); a right click takes its last point back (and the points
--- that needed it). Your own talents in gold, the plan's in blue; under the branches, the next talent of the plan
--- and the level it comes at. Kept for each character. At a new level, the talent to take said once (an option).
+-- Your talents planned, in Training's own window: the three branches of your class side by side as the game's
+-- talent window draws them, read from the game itself (TalentPlan.lua has the rules and the plans). A click adds
+-- the next point to a talent, a right click takes its last point back (and the points that needed it). Your own
+-- talents in gold, the plan's in blue. This window comes when the game's talent window cannot (in a fight);
+-- otherwise the game's window opens, with the calculator beside it (TalentPanel.lua). At a new level, the talent
+-- to take is said once, after the fight if there is one (an option): a click opens the calculator.
 
 local W = Wanderer
 local U = W and W.Util
 local Skin = W and W.Skin
-local Safe, Clean = U and U.Safe, U and U.Clean
 
-local MOST = 51 -- talent points at level 60
-local FIRST_LEVEL = 10 -- the first point
-local PER_ROW = 5 -- points in a branch before its next row opens
 local CELL, GAP = 36, 10 -- a talent's square, the room around it
 local BRANCH_GAP = 28
 local PLANNED = Skin.COLORS.blue
 
 local window, view
-local tree -- the game's tree as last read: { nodes, names, byId, from (node -> the nodes leading to it) }
 
 local Settings = ns.Settings
 
-local function Plan()
-	local db = ns.DB()
-	db.talentPlan = type(db.talentPlan) == "table" and db.talentPlan or {}
-	return db.talentPlan
-end
-
-local function ReadTree()
-	local read = W.TalentTree and W.TalentTree()
-	if not read then
-		tree = nil
-		return nil
-	end
-	local byId, from = {}, {}
-	for _, node in ipairs(read.nodes) do byId[node.id] = node end
-	for _, node in ipairs(read.nodes) do
-		for _, target in ipairs(node.opens) do
-			from[target] = from[target] or {}
-			table.insert(from[target], node.id)
-		end
-	end
-	tree = { nodes = read.nodes, names = read.names, byId = byId, from = from }
-	return tree
-end
-
--- The rules ------------------------------------------------------------------------------------------------------
-
--- The ranks a list of points gives: node -> ranks; the points in each branch, by row.
-local function Ranks(steps, upTo)
-	local ranks, rows = {}, { {}, {}, {} }
-	for index = 1, upTo or #steps do
-		local node = tree.byId[steps[index]]
-		if node then
-			ranks[node.id] = (ranks[node.id] or 0) + 1
-			rows[node.branch][node.tier] = (rows[node.branch][node.tier] or 0) + 1
-		end
-	end
-	return ranks, rows
-end
-
--- Whether one more point can go to a node after these ranks.
-local function Allowed(node, ranks, rows, count)
-	if count >= MOST or (ranks[node.id] or 0) >= node.most then return false end
-	local below = 0
-	for tier = 1, node.tier - 1 do below = below + (rows[node.branch][tier] or 0) end
-	if below < PER_ROW * (node.tier - 1) then return false end
-	for _, before in ipairs(tree.from[node.id] or {}) do
-		local need = tree.byId[before]
-		if need and (ranks[before] or 0) < need.most then return false end
-	end
-	return true
-end
-
--- The plan kept only as far as the rules allow it, point by point (a point taken back can close others).
-local function Check(steps)
-	local kept = {}
-	local ranks, rows = {}, { {}, {}, {} }
-	for _, id in ipairs(steps) do
-		local node = tree.byId[id]
-		if node and Allowed(node, ranks, rows, #kept) then
-			kept[#kept + 1] = id
-			ranks[id] = (ranks[id] or 0) + 1
-			rows[node.branch][node.tier] = (rows[node.branch][node.tier] or 0) + 1
-		end
-	end
-	return kept
-end
-
-local function SpellOf(node)
-	local info = node.spell and C_Spell and Safe(C_Spell.GetSpellInfo, node.spell)
-	if type(info) == "table" then return Clean(info.name), Clean(info.iconID) end
-	return nil, nil
-end
-
--- The next point of the plan you have not taken: its node, its rank, the level it comes at; nil when none.
-function ns.NextTalent()
-	if not (tree or ReadTree()) then return nil end
-	local steps, seen = Check(Plan()), {}
-	for index, id in ipairs(steps) do
-		local node = tree.byId[id]
-		if node then
-			seen[id] = (seen[id] or 0) + 1
-			if seen[id] > node.ranks then return node, seen[id], FIRST_LEVEL + index - 1 end
-		end
-	end
-	return nil
-end
-
--- Drawing ----------------------------------------------------------------------------------------------------
+local SpellOf = ns.TalentSpell
 
 local function Draw()
 	if not (window and window:IsShown()) then return end
-	if not ReadTree() then
+	local tree = ns.TalentTreeNow()
+	if not tree then
 		view.empty:Show()
 		for _, button in ipairs(view.buttons) do button:Hide() end
 		view.footer:SetText("")
 		return
 	end
 	view.empty:Hide()
-	-- (the plan as the rules keep it, for the drawing only: saved on your clicks alone, so a tree read too early
-	-- never cuts it)
-	local steps = Check(Plan())
-	local ranks, rows = Ranks(steps)
+	local steps = ns.PlanStepsSeen()
+	local ranks, rows = ns.PlanRanks(steps)
 	-- The branches side by side: each as wide as its columns.
 	local columns, tiers = { 0, 0, 0 }, 0
 	for _, node in ipairs(tree.nodes) do
@@ -151,8 +58,8 @@ local function Draw()
 		button:SetPoint("TOPLEFT", view, "TOPLEFT", left[node.branch] + (node.column - 1) * (CELL + GAP), -(26 + (node.tier - 1) * (CELL + GAP)))
 		local _, icon = SpellOf(node)
 		button.icon:SetTexture(icon or 134400)
-		local have, plan = node.ranks, ranks[node.id] or 0
-		local open = Allowed(node, ranks, rows, #steps) or plan > 0 or have > 0
+		local have, plan = node.ranks or 0, ranks[node.id] or 0
+		local open = ns.PlanAllowed(node, ranks, rows, #steps) or plan > 0 or have > 0
 		button.icon:SetDesaturated(not open)
 		button.icon:SetAlpha(open and 1 or 0.45)
 		if have > 0 then
@@ -170,61 +77,11 @@ local function Draw()
 	for index = #tree.nodes + 1, #view.buttons do view.buttons[index]:Hide() end
 	view:SetSize(left[3] + columns[3] * (CELL + GAP), 26 + tiers * (CELL + GAP))
 	window:SetSize(view:GetWidth() + Skin.Margin() * 2 + 16, view:GetHeight() + 160)
-	-- Under the branches: the plan's count, the next talent.
+	-- Under the branches: the plan's name and count, the next talent.
 	local node, rank, level = ns.NextTalent()
-	local parts = { L.PLAN_POINTS:format(#steps, MOST) }
-	if node then
-		local name = SpellOf(node) or "?"
-		parts[#parts + 1] = L.PLAN_NEXT:format(name, rank, level)
-	end
+	local parts = { ns.CurrentPlan().name, L.PLAN_POINTS:format(#ns.PlanSteps(), ns.TALENT_MOST) }
+	if node then parts[#parts + 1] = L.PLAN_NEXT:format(SpellOf(node) or "?", rank, level) end
 	view.footer:SetText(table.concat(parts, U.SEPARATOR))
-end
-
--- The plan kept: drawn here and on the book's page (its link says whether one is planned).
-local function Save(steps)
-	ns.DB().talentPlan = steps
-	Draw()
-	ns.Draw(true)
-end
-
-local function Add(node)
-	local steps = Check(Plan())
-	local ranks, rows = Ranks(steps)
-	if Allowed(node, ranks, rows, #steps) then
-		steps[#steps + 1] = node.id
-		Skin.Play("click")
-		return Save(steps)
-	end
-	Skin.Play("refuse")
-end
-
--- Its last point taken back, and those that needed it.
-local function Remove(node)
-	local steps = Plan()
-	for index = #steps, 1, -1 do
-		if steps[index] == node.id then
-			table.remove(steps, index)
-			break
-		end
-	end
-	Save(Check(steps))
-end
-
--- The plan started from your talents as they are: row by row in each branch, the order the rules allow.
-local function FromYours()
-	if not (tree or ReadTree()) then return end
-	local list = {}
-	for _, node in ipairs(tree.nodes) do
-		for _ = 1, node.ranks do list[#list + 1] = node end
-	end
-	table.sort(list, function(a, b)
-		if a.tier ~= b.tier then return a.tier < b.tier end
-		if a.branch ~= b.branch then return a.branch < b.branch end
-		return a.column < b.column
-	end)
-	local steps = {}
-	for _, node in ipairs(list) do steps[#steps + 1] = node.id end
-	Save(Check(steps))
 end
 
 local function Create()
@@ -239,7 +96,7 @@ local function Create()
 	function view.MakeButton()
 		local button = CreateFrame("Button", nil, view)
 		button:SetSize(CELL, CELL)
-		button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		button:RegisterForClicks("LeftButtonUp", "RightButtonUp") button.padRight = true
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("TOPLEFT", 1, -1)
 		button.icon:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -251,7 +108,9 @@ local function Create()
 		hover:SetAllPoints(button.icon)
 		hover:SetColorTexture(1, 1, 1, 0.12)
 		button:SetScript("OnClick", function(self, mouse)
-			if mouse == "RightButton" then Remove(self.node) else Add(self.node) end
+			local ok
+			if mouse == "RightButton" then ok = ns.PlanRemove(self.node) else ok = ns.PlanAdd(self.node) end
+			Skin.Play(ok and "click" or "refuse")
 		end)
 		button:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -268,13 +127,11 @@ local function Create()
 	view.footer = Skin.Text(window, "GameTooltipText", "text")
 	view.footer:SetPoint("TOPLEFT", view, "BOTTOMLEFT", 0, -10)
 	view.footer:SetJustifyH("LEFT")
-	local yours = Skin.Button(window, L.PLAN_FROM_YOURS, FromYours)
+	local yours = Skin.Button(window, L.PLAN_FROM_YOURS, function() ns.PlanFromYours() end)
 	yours:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", margin, margin)
 	Skin.Tooltip(yours, L.PLAN_FROM_YOURS_DESC)
 	local clear = Skin.Button(window, L.PLAN_CLEAR, function()
-		Skin.Ask(L.PLAN_CLEAR_ASK, function()
-			Save({})
-		end)
+		Skin.Ask(L.PLAN_CLEAR_ASK, function() ns.PlanClear() end)
 	end)
 	clear:SetPoint("LEFT", yours, "RIGHT", 8, 0)
 	-- (its foot full of buttons: the "?" in the heading)
@@ -289,28 +146,35 @@ local function Create()
 		if skin then skin:Layout() end
 	end)
 	Skin.Get(window):Layout()
+	ns.OnPlanChanged(Draw)
 end
 
+-- The game's talent window with the calculator; Training's own window when the game's cannot open (a fight).
 function ns.ToggleTalents()
+	if window and window:IsShown() then return window:Hide() end
+	if ns.OpenTalentCalculator and ns.OpenTalentCalculator() then return end
 	if not window then Create() end
-	window:SetShown(not window:IsShown())
+	window:Show()
 end
 
--- Your talents changed (a point spent, a reset): drawn again; at a new level, the talent to take said once.
+-- Your talents changed (a point spent, a reset, a specialization): read again and drawn again.
 function ns.TalentsChanged()
-	tree = nil
+	ns.ForgetTalentTree()
 	Draw()
+	if ns.DrawTalentsEverywhere then ns.DrawTalentsEverywhere() end
 end
 
+-- At a new level with a point to spend: the talent the plan takes next, said once (after the fight).
 function ns.TalentsAtLevel(level)
 	local settings = Settings()
-	if not (settings and settings.talentsReminder and level and level >= FIRST_LEVEL) then return end
+	if not (settings and settings.talentsReminder and level and level >= ns.TALENT_FIRST_LEVEL) then return end
 	local node, rank, at = ns.NextTalent()
 	if not (node and at <= level) then return end
 	-- (every point already spent elsewhere: nothing to take now)
 	local free = U.Clean(U.Safe(UnitCharacterPoints, "player"))
 	if free and free < 1 then return end
 	local name, icon = SpellOf(node)
-	W.Toast(L.PLAN_TOAST:format(name or "?"), L.PLAN_TOAST_TEXT:format(rank, tree.names[node.branch] or ""),
-		{ kicker = "Wanderer", duration = 6, icon = icon })
+	local tree = ns.TalentTreeNow()
+	W.Toast(L.PLAN_TOAST:format(name or "?"), L.PLAN_TOAST_TEXT:format(rank, tree and tree.names[node.branch] or ""),
+		{ kicker = "Wanderer", duration = 8, icon = icon, wait = 120, onClick = function() ns.ToggleTalents() end, hint = L.PLAN_TOAST_HINT })
 end

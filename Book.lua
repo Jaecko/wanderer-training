@@ -174,7 +174,8 @@ function ns.Init()
 		slash = "/wtraining",
 		title = L.ADDON,
 		news = L.NEWS_LINES,
-		defaults = { remind = false, trainer = true, talentsReminder = true, naowhPanel = true, spellTips = true },
+		defaults = { remind = false, trainer = true, talentsReminder = true, naowhPanel = true, spellTips = true,
+			talentsPanel = true, talentsMarks = true, talentsGuard = true, ranksAuto = true },
 		launcher = { label = L.TITLE, open = function() ns.Toggle() end, attention = function() return ns.Attention() end,
 			summary = function() return ns.Summary() end },
 		-- (Wanderer turned on or off: the book's button with it)
@@ -193,6 +194,7 @@ function ns.Init()
 				o.Under(o.Checkbox("training", "naowhPanel", L.NAOWH_PANEL, L.NAOWH_PANEL_DESC), trainer, o.IsOn("training", "trainer"))
 			end
 			o.Checkbox("training", "spellTips", L.SPELL_TIPS, L.SPELL_TIPS_DESC)
+			o.Checkbox("training", "ranksAuto", L.RANKS_AUTO, L.RANKS_AUTO_DESC)
 
 			-- (both notices of a new level together: what your trainer has, the talent your plan takes)
 			o.Header(L.SECTION_AT_LEVEL)
@@ -204,6 +206,9 @@ function ns.Init()
 				o.CloseSettings()
 				ns.ToggleTalents()
 			end)
+			o.Checkbox("training", "talentsPanel", L.CALC_OPTION, L.CALC_OPTION_DESC)
+			o.Checkbox("training", "talentsMarks", L.MARKS_OPTION, L.MARKS_OPTION_DESC)
+			o.Checkbox("training", "talentsGuard", L.GUARD_OPTION, L.GUARD_OPTION_DESC)
 
 			o.Header(L.RANKS_KEPT_OPTION, { advanced = true })
 			o.Button(L.RANKS_KEPT_OPTION, L.RANKS_FORGET, L.RANKS_FORGET_DESC, function() ns.ForgetKeptRanks() end)
@@ -212,7 +217,9 @@ function ns.Init()
 	SLASH_WANDERERTRAINING1 = "/wtraining"
 	SLASH_WANDERERTRAINING2 = "/wtrain"
 	SlashCmdList.WANDERERTRAINING = function(text)
-		if (text or ""):lower():find("talent", 1, true) then return ns.ToggleTalents() end
+		local typed = (text or ""):lower()
+		if typed:find("talent", 1, true) and typed:find("dump", 1, true) then return ns.TalentsDump() end
+		if typed:find("talent", 1, true) then return ns.ToggleTalents() end
 		ns.Toggle()
 	end
 	if W.OnComparisonChanged then W.OnComparisonChanged(ns.Changed) end
@@ -222,7 +229,8 @@ function ns.Init()
 	local events = CreateFrame("Frame")
 	for _, event in ipairs({ "PLAYER_LOGIN", "SPELLS_CHANGED", "PLAYER_LEVEL_UP", "PLAYER_MONEY", "UPDATE_FACTION", "SKILL_LINES_CHANGED",
 		"SPELL_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED", "PET_BAR_UPDATE", "TRAINER_SHOW", "TRAINER_CLOSED", "TRAINER_UPDATE",
-		"CHARACTER_POINTS_CHANGED", "TRAIT_CONFIG_UPDATED", "ADDON_LOADED" }) do
+		"CHARACTER_POINTS_CHANGED", "TRAIT_CONFIG_UPDATED", "ADDON_LOADED", "INSPECT_READY", "PLAYER_REGEN_ENABLED",
+		"PLAYER_REGEN_DISABLED", "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "ACTIVE_TALENT_GROUP_CHANGED" }) do
 		pcall(events.RegisterEvent, events, event)
 	end
 	events:SetScript("OnEvent", function(_, event, arg, ...)
@@ -230,7 +238,23 @@ function ns.Init()
 		if event == "GET_ITEM_INFO_RECEIVED" and not (ns.IsTome(arg) and (...) ~= false) then return end
 		if event == "SPELL_DATA_LOAD_RESULT" and not ns.Asked(arg) then return end
 		if event == "ADDON_LOADED" then
-			if arg == "Blizzard_PlayerSpells" then Attach() end
+			if arg == "Blizzard_PlayerSpells" then
+				Attach()
+				ns.AttachTalents()
+			end
+			return
+		end
+		-- (the talents: a player of your class inspected, a fight begun or ended, the other specialization)
+		if event == "INSPECT_READY" then
+			for _, unit in ipairs({ "target", "mouseover", "focus" }) do
+				if U.Clean(U.Safe(UnitGUID, unit)) == arg then ns.ReadInspected(unit) break end
+			end
+			return
+		end
+		if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED" then return ns.TalentPanelEvent(event) end
+		if event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+			ns.TalentsChanged()
+			ns.SpecChanged()
 			return
 		end
 		-- (your gold changed: the sums drawn again against it, nothing read again)
@@ -238,9 +262,13 @@ function ns.Init()
 		if event == "PLAYER_LOGIN" then
 			ns.LoadCharacter()
 			ns.SeedWays()
-			if Book() then Attach() end
+			if Book() then
+				Attach()
+				ns.AttachTalents()
+			end
 		elseif event == "PET_BAR_UPDATE" or event == "SPELLS_CHANGED" then
 			ns.NoteTomes()
+			if event == "SPELLS_CHANGED" then ns.TalentPanelEvent(event) end
 		elseif event == "PLAYER_LEVEL_UP" then
 			C_Timer.After(1, function()
 				LevelUp(tonumber(arg))

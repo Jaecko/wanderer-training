@@ -489,7 +489,7 @@ local function Create()
 	view.ranks:SetJustifyH("LEFT")
 	view.ranksUpdate = Skin.SmallButton(right, L.RANKS_UPDATE, function(self, mouse) ns.RanksClick(self, mouse) end,
 		function() return ns.RanksTooltip() end, 26)
-	view.ranksUpdate:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	view.ranksUpdate:RegisterForClicks("LeftButtonUp", "RightButtonUp") view.ranksUpdate.padRight = true
 	view.ranksUpdate:SetPoint("TOPLEFT", view.ranks, "BOTTOMLEFT", 0, -8)
 	view.ranks:Hide()
 	view.ranksUpdate:Hide()

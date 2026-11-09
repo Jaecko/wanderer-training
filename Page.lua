@@ -155,6 +155,10 @@ function ns.EntryActions(entry, opts)
 			end
 		end
 	end
+	-- (a rank you know, lower than your best: in your hand, to put on a bar; it is kept at that rank there)
+	if entry and entry.kind == "spell" and entry.status == "known" and ns.BestRank(entry.id) then
+		actions[#actions + 1] = { text = L.RANKS_TAKE, glyph = "up", hint = L.RANKS_TAKE_DESC, onClick = function() ns.TakeRank(entry.id) end }
+	end
 	if entry and not opts.noPin then
 		if entry.kind == "weapon" then
 			actions[#actions + 1] = { text = L.PIN_MASTER, glyph = "home", hint = L.PIN_MASTER_HINT,
@@ -292,7 +296,7 @@ end
 -- A row under the mouse: its main action only (line.act, Learn at the trainer: over its price), and its "..."
 -- (line.menu, the kit's: shown by the row itself, left of the price or of the action).
 local function Hover(line)
-	local over = line:IsMouseOver() or (line.act ~= nil and line.act:IsMouseOver()) or (line.menu ~= nil and line.menu:IsMouseOver())
+	local over = (U.Hovered and U.Hovered(line) or line:IsMouseOver()) or (line.act ~= nil and line.act:IsMouseOver()) or (line.menu ~= nil and line.menu:IsMouseOver())
 	local acting = line.act ~= nil and line.act.run ~= nil and over
 	if line.act then line.act:SetShown(acting) end
 	line.cells.price:SetAlpha(acting and 0 or 1)
@@ -431,8 +435,7 @@ function ns.WaysGrid(parent, width, size)
 end
 
 local function DrawWays()
-	local planned = ns.NextTalent()
-	view.plan.text:SetText(planned and L.PLAN_LINK_NEXT or L.PLAN_LINK)
+	view.plan.text:SetText(L.CALC_TITLE)
 	view.plan:SetWidth(U.Measure(view.plan.text, "GetStringWidth", 80) + 2)
 	local chosen = view.ways:Draw(ink.text, ink.muted)
 	view.waysHint:SetShown(chosen == nil)
@@ -499,7 +502,7 @@ local function Tile(index)
 	local hover = tile:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints(tile.icon)
 	hover:SetColorTexture(1, 1, 1, 0.15)
-	tile:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	tile:RegisterForClicks("LeftButtonUp", "RightButtonUp") tile.padRight = true
 	tile:SetScript("OnClick", function(self, mouse)
 		local entry = self.entry
 		if not entry then return end
@@ -664,7 +667,7 @@ local function PageButton(parent, text, width, height, onClick, tip)
 	local button = Skin.Button(parent, text, onClick, nil, width)
 	button:SetSize(width, height)
 	if tip then Skin.Tooltip(button, tip) end
-	function button:RightClicks() self:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+	function button:RightClicks() self:RegisterForClicks("LeftButtonUp", "RightButtonUp") self.padRight = true end
 	return button
 end
 
@@ -716,7 +719,7 @@ function ns.BuildPage()
 	view.plan = CreateFrame("Button", nil, right)
 	view.plan:SetHeight(16)
 	view.plan:SetPoint("BOTTOMRIGHT", waysTitle, "BOTTOMLEFT", RIGHT, 0)
-	view.plan.text = Skin.Text(view.plan, "GameFontNormalSmall", "soft")
+	view.plan.text = Skin.Text(view.plan, "GameFontNormalSmall", "gold")
 	view.plan.text:SetPoint("RIGHT")
 	view.plan:SetScript("OnClick", function() ns.ToggleTalents() end)
 	Skin.Tooltip(view.plan, L.PLAN_OPEN_DESC)
@@ -792,7 +795,7 @@ function ns.BuildPage()
 	view.ranks = CreateFrame("Button", nil, page)
 	view.ranks:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
 	view.ranks:SetSize(LEFT, RANKS_ROOM - 8)
-	view.ranks:RegisterForClicks("RightButtonUp")
+	view.ranks:RegisterForClicks("RightButtonUp") view.ranks.padRight = true
 	view.ranks:SetScript("OnClick", function(self) ns.RanksMenu(self) end)
 	Skin.Tooltip(view.ranks, function() return ns.RanksTooltip() end)
 	view.ranks:Hide()

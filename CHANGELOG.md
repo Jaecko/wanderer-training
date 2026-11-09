@@ -1,22 +1,17 @@
-# Wanderer Training 1.3.0
+# Wanderer Training 1.4.0
 
-First release, an extension of Wanderer (1.4 or later).
+The talent calculator.
 
 ### New
-- A window of its own, opened from a button on your spellbook, Wanderer's menu (its word pulses when something that counts can be learned), a key of yours or /wtraining: your class spells, weapon skills and, for warlocks, demon tomes.
-- Sections: to learn now, an earlier rank first, level by level with its own sum, with a talent, outside what you play, set aside, and what you know if you wish. A search field finds a spell by name.
-- Three sums to plan ahead: now, at the next level that brings something, and everything left; weapon skills have their own. Your gold beside them and what is missing; your other characters' gold in one line.
-- Prices with your reputation's discount, and the prices your class trainer really asks, read at each visit and kept for this character.
-- A goal of your own beside the sums: riding at level 40 in one click (an estimate you change to the price you see) or any sum you save for, with what you have in hand.
-- What you play: one specialization or several, the bear and the cat apart for a feral druid. The sums count only what is worth buying for it (a feral druid buys only the first rank of Moonfire); the rest stays shown, can be bought and counted anyway.
-- Set a spell (all its ranks) or a weapon skill aside, and count it again whenever you like.
-- Every trainer in Wanderer's window (an option, on): Learn what I play, the cheapest first while your gold lasts, what it costs and what is left after; Learn everything one button further; the game's window one click away.
-- What a new rank brings, on its row: the first number that changes in its description.
-- Spell tooltips on your spellbook and bars: the next rank, its level and its price; for a spell outside what you play, why in one line (an option, on).
-- Older ranks on your bars: listed after learning, updated in one click out of a fight, undone, or kept on purpose. Macros naming an older rank are updated on the same click.
-- Your talents planned point by point with the game's rules (five points a row, the arrow's talent full first), yours in gold and the plan's in blue; started from your talents in one click; the planned talent said at each new level (an option, on). /wtraining talents.
-- The closest class trainer or weapon master pinned on your map, followed by Wanderer Maps' arrow when it is there; Wanderer's town card says what waits at your trainer in town.
-- A short notice at a new level when something that counts waits at your trainer (an option, off).
-- Makes way for Naowh Training's panel at class trainers while it is on (an option).
-- Everything kept per character. In ten languages.
-- Built on the data of What's Training (MIT); trainer places from the CMaNGOS classic database (GPL v3) and pfQuest (MIT).
+- On the game's talent window: your plan over each talent (its place in the order, the ranks planned in blue, a tick once taken, a frame on the next one), and a Calculator button.
+- Simulate: your clicks build the plan without spending a point; the game's talents are never touched. Plan up to level 60 at any level.
+- Order: the list of your plan's points, level by level, the ones taken ticked, the next one lit; on the tree, the next point to spend stands out (a filled frame and the word Next). Choose the plan shown in one list.
+- What a talent really changes, in your own numbers: now, with one more point and at its last rank (damage or healing, cost, cast, cooldown, range), each figure marked read in the game, calculated or unknown, never guessed.
+- The whole plan against your talents: every spell it changes and every talent it moves.
+- Several plans per character, each with a note, one tied to each specialization; undo and redo.
+- Your plan seen at any level, a search of the talents naming a spell or a word, a comparison with your talents, another plan or a player of your class you inspected (the points to take back and to add).
+- Share: a code that keeps the order of your points, a Wowhead Forever link; import both; copy the player inspected.
+- Over the game's Apply button, the talents you are about to take outside your plan (an option, on). Nothing is ever stopped or spent for you.
+- The next talent of your plan at a new level waits for the end of a fight; a click opens the calculator.
+- New ranks go on your bars by themselves when you learn them (an option, on): never in a fight, Shift lets it pass, one click undoes it. Macros stay a click of yours.
+- A lower rank you put on a bar yourself stays there, and any lower rank you know can be taken in hand from its row.

@@ -569,7 +569,9 @@ local lastUpdate
 local UNDO_FOR = 600 -- seconds the undo stays offered
 
 -- A spell put on a button (the spell in hand first: an empty hand would take the button away).
+local placing = false -- (Training's own hand: not you choosing a rank)
 local function Place(slot, id)
+	placing = true
 	Pickup(id)
 	local placed = false
 	if not GetCursorInfo or GetCursorInfo() == "spell" then
@@ -577,16 +579,15 @@ local function Place(slot, id)
 		placed = true
 	end
 	if ClearCursor then ClearCursor() end
+	placing = false
 	return placed
 end
 
-function ns.UpdateRanks()
-	if Fighting() then return nil, "combat" end
-	if not PlaceAction then return nil, "none" end
-	if GetCursorInfo and GetCursorInfo() then return nil, "cursor" end
+-- The buttons of the old ranks not kept (only: those of these spells) given the best rank: how many, and what changed.
+local function UpdateButtons(only)
 	local changed, done = 0, {}
 	for _, spell in ipairs(ns.OldRanks().spells) do
-		if not spell.kept then
+		if not spell.kept and (not only or only(spell)) then
 			for _, slot in ipairs(spell.slots) do
 				local kind, id = GetActionInfo(slot)
 				-- (still the same button: nothing moved since it was read)
@@ -597,6 +598,14 @@ function ns.UpdateRanks()
 			end
 		end
 	end
+	return changed, done
+end
+
+function ns.UpdateRanks()
+	if Fighting() then return nil, "combat" end
+	if not PlaceAction then return nil, "none" end
+	if GetCursorInfo and GetCursorInfo() then return nil, "cursor" end
+	local changed, done = UpdateButtons()
 	-- The macros listed, rewritten (each still as it was read; one too long once rewritten left as it is).
 	local rewritten = {}
 	for _, macro in ipairs(EditMacro and ns.OldRanks().macros or {}) do
@@ -657,6 +666,67 @@ function ns.ForgetKeptRanks()
 end
 
 local function RankText(id) return Rank(id) or ("#" .. id) end
+
+-- By themselves (an option, on): when you learn a new rank, the buttons holding an older one take it, out of a
+-- fight, with nothing in your hand; Shift lets it pass, one click undoes it. Only a rank just learned: a lower
+-- rank you put back on a bar afterwards stays there, and a rank you place yourself is kept for good.
+local autoReady = false -- (a moment after login: the game knows your spells by then)
+
+-- The best ranks already seen by this character (a best rank not in it is a new one).
+local function SeenBests()
+	local db = ns.DB()
+	db.ranksSeen = type(db.ranksSeen) == "table" and db.ranksSeen or {}
+	return db.ranksSeen
+end
+
+function ns.AutoRanks()
+	local settings = ns.Settings()
+	if not (autoReady and settings and settings.ranksAuto ~= false and PlaceAction) or Fighting() then return end
+	if (U.IsSkipping and U.IsSkipping()) or (GetCursorInfo and GetCursorInfo()) then return end
+	scanned = nil
+	local seen = SeenBests()
+	local changed, done = UpdateButtons(function(spell) return not seen[spell.best] end)
+	for _, spell in ipairs(ns.OldRanks().spells) do seen[spell.best] = true end
+	if changed == 0 then return 0 end
+	lastUpdate = { at = GetTime(), changes = done, macros = {} }
+	ns.RanksChanged()
+	W.Toast(changed == 1 and L.RANKS_DONE_ONE or L.RANKS_DONE:format(changed), L.RANKS_AUTO_UNDO,
+		{ kicker = L.TITLE, duration = 8, onClick = function() ns.UndoRanks() end, hint = L.RANKS_UNDO_HINT })
+	return changed
+end
+
+-- The ranks known at login are not new (the buttons as you left them stay so).
+function ns.StartAutoRanks()
+	autoReady = true
+	scanned = nil
+	local seen = SeenBests()
+	for _, spell in ipairs(ns.OldRanks().spells) do seen[spell.best] = true end
+end
+
+-- A lower rank you put on a bar yourself is kept at that rank (said once; the update's right click gives it back).
+local held, heldAt
+function ns.RankInHand()
+	if placing or not GetCursorInfo then return end
+	local kind, _, _, id = GetCursorInfo()
+	if kind == "spell" and id then held, heldAt = id, GetTime() end
+end
+
+function ns.RankPlaced(slot)
+	if placing or not (held and GetActionInfo and type(slot) == "number") then return false end
+	local kind, id = GetActionInfo(slot)
+	if kind ~= "spell" or id ~= held or GetTime() - heldAt > 2 then return false end
+	held = nil
+	if not ns.BestRank(id) or ns.DB().keepRanks[id] then return false end
+	ns.KeepRank(id, true)
+	W.Print(L.RANKS_KEPT_SAID:format(Name(id) or ("#" .. id), RankText(id)))
+	return true
+end
+
+-- A lower rank taken in hand (the row's card, at Training's window), to put on a bar.
+function ns.TakeRank(id)
+	if Fighting() then return W.Print(L.RANKS_COMBAT) end
+	Pickup(id)
+end
 
 -- The lines of the tooltip: each spell, its rank on your bars and the best you know, kept or not.
 -- (nothing old left on the bars nor in the macros)
@@ -800,8 +870,14 @@ function ns.InitRanks()
 		"PLAYER_REGEN_ENABLED", "PLAYER_LOGIN", "UPDATE_MACROS" }) do
 		pcall(events.RegisterEvent, events, event)
 	end
-	events:SetScript("OnEvent", function()
+	local auto = U.Debounce(0.5, function() ns.AutoRanks() end)
+	pcall(events.RegisterEvent, events, "CURSOR_CHANGED")
+	events:SetScript("OnEvent", function(_, event, arg)
+		if event == "CURSOR_CHANGED" then return ns.RankInHand() end
+		if event == "ACTIONBAR_SLOT_CHANGED" then ns.RankPlaced(arg) end
 		ns.RanksChanged()
+		if event == "PLAYER_LOGIN" then C_Timer.After(5, ns.StartAutoRanks) end
+		if event == "SPELLS_CHANGED" or event == "LEARNED_SPELL_IN_SKILL_LINE" or event == "PLAYER_REGEN_ENABLED" then auto() end
 	end)
 end
 
