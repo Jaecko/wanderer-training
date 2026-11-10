@@ -181,6 +181,8 @@ local function Buy(chosen)
 	for _, service in ipairs(chosen) do learned.keys[Key(service)] = true end
 	learnedHere = true
 	waiting = GetTime() + 2 + spacing
+	-- (no answer from the trainer, every purchase refused: the buttons back all the same)
+	C_Timer.After(2 + spacing + 0.1, ns.Changed)
 	purchase = purchase + 1
 	buying = true
 	local mine = purchase
@@ -542,7 +544,6 @@ local function MakeWay()
 	if not (settings and settings.naowhPanel ~= false and ns.NaowhPanel()) then return false end
 	return not U.Clean(U.Safe(IsTradeskillTrainer))
 end
-ns.MakeWayForNaowh = MakeWay
 
 -- A trainer of your class's spells (Naowh's panel shows only there); its list not come yet: taken as one, and
 -- looked at again a moment after.
@@ -671,7 +672,8 @@ GiveBack = function(problem)
 	if GameFrame() then pcall(U.HideOffScreen, GameFrame(), false) end
 	local frame = GameFrame()
 	if atTrainer and frame and not frame:IsShown() then
-		if ShowUIPanel then pcall(ShowUIPanel, frame) else frame:Show() end
+		-- (a controller on: the frame's own Show, the game's panels opened by an addon cost it its interact target)
+		if ShowUIPanel and not (U.UsingPad and U.UsingPad()) then pcall(ShowUIPanel, frame) else frame:Show() end
 	end
 	-- (the error itself said, as the game says any addon's, to be found and mended)
 	if problem ~= nil and geterrorhandler then pcall(geterrorhandler(), problem) end

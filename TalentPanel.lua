@@ -535,7 +535,6 @@ ns.DrawTalentsEverywhere = DrawAll
 
 function ns.HoverTalent(node)
 	hovered = node
-	pointed = tab == "order" and node or nil
 	if tab ~= "effects" and tab ~= "order" and node then
 		tab = "effects"
 		view.tabs:Select(tab)
@@ -572,7 +571,8 @@ end
 
 local function MakePanel()
 	panel = Skin.CreateWindow("WandererTrainingTalentPanel", "MEDIUM", _G.PlayerSpellsFrame)
-	if Skin.PadWindow then Skin.PadWindow(panel, { side = true }) end
+	-- (a controller: it starts on Simulate, and the right button closes the game's talents, this panel goes with them)
+	if Skin.PadWindow then Skin.PadWindow(panel, { side = true, takes = true, closeBinding = "TOGGLETALENTS" }) end
 	panel:SetWidth(PANEL_WIDTH)
 	panel:EnableMouse(true)
 	panel:SetClampedToScreen(true)
@@ -603,6 +603,7 @@ local function MakePanel()
 	view.sim = Skin.Button(panel, L.SIM_START, function() SetSimulating(not simulating) end, "main")
 	view.sim:SetPoint("TOPLEFT", view.plans, "BOTTOMLEFT", 0, -10)
 	view.sim:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
+	view.sim.padFirst = true
 	Skin.Tooltip(view.sim, L.SIM_DESC)
 	-- The level seen: arrows and the wheel.
 	local levelRow = CreateFrame("Frame", nil, panel)
@@ -785,13 +786,14 @@ function ns.AttachTalents()
 	overlay:SetFrameLevel(frame:GetFrameLevel() + 1)
 	MakePanel()
 	MakeButtons()
-	frame:HookScript("OnShow", function()
+	local function Shown()
 		if not On() then return panel:Hide() end
 		frame.wandererCalc:Show()
 		local settings = Settings()
 		if settings.talentsPanel ~= false then panel:Show() end
 		C_Timer.After(0, DrawAll)
-	end)
+	end
+	frame:HookScript("OnShow", Shown)
 	frame:HookScript("OnHide", function()
 		SetSimulating(false)
 		panel:Hide()
@@ -807,12 +809,13 @@ function ns.AttachTalents()
 		end
 	end
 	ns.OnPlanChanged(DrawAll)
-	if frame:IsShown() then frame:GetScript("OnShow")(frame) end
+	if frame:IsShown() then Shown() end
 end
 
 -- Opens the game's talent window with the calculator (out of a fight); false when it cannot.
+-- (a controller on: never from here, the game's panels opened by an addon cost it its interact target)
 function ns.OpenTalentCalculator()
-	if InFight() then return false end
+	if InFight() or (U.UsingPad and U.UsingPad()) then return false end
 	local util = _G.PlayerSpellsUtil
 	if not (util and util.OpenToClassTalentsTab) then return false end
 	local ok = pcall(util.OpenToClassTalentsTab)

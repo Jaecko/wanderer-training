@@ -12,7 +12,7 @@
 ## Notes-zhCN: 在独立窗口中查看训练师能教你什么（法术书上有一个按钮）：职业法术、武器技能、恶魔典籍，以及现在、下一级和直到最后一级的费用。
 ## Notes-zhTW: 在獨立視窗中查看訓練師能教你什麼（法術書上有一個按鈕）：職業法術、武器技能、惡魔典籍，以及現在、下一級和直到最後一級的費用。
 ## Category: Class
-## Version: 1.4.1
+## Version: 1.4.3
 ## X-Curse-Project-ID: 1754440
 ## Author: Jaekco
 ## IconTexture: Interface\Icons\INV_Misc_Book_07

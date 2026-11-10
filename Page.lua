@@ -856,8 +856,8 @@ function ns.PlacePage(host)
 	view.listHeight = pageHeight
 	FitList()
 	page:SetFrameLevel(host:GetFrameLevel() + 5)
-	page:Show()
-	ns.Draw()
+	-- (shown for the first time, it draws itself)
+	if page:IsShown() then ns.Draw() else page:Show() end
 end
 
 -- A goal of your own ------------------------------------------------------------------------------------------------
