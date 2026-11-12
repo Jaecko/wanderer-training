@@ -7,7 +7,9 @@ local L = ns.L
 local W = Wanderer
 local U = W and W.Util
 
-if W and W.TownLine and U then
+-- (Init only, once Wanderer's check has passed)
+function ns.InitTown()
+	if not (W.TownLine and U) then return end
 	W.TownLine(function()
 		if not ns.class then return nil end
 		local trainer = ns.Build().sums.trainer

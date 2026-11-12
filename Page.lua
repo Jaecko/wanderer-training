@@ -16,7 +16,8 @@ local Skin = W and W.Skin
 local WIDTH, HEIGHT = 880, 620
 local LEFT = 500 -- the list
 local RIGHT_X, RIGHT = 548, 332 -- the right column
-local ROW = 38
+-- (the kit's row: the list fits the page; read as it is, an older Wanderer has none)
+local ROW = (Skin and rawget(Skin, "ROW") or { normal = 34 }).normal
 local TILE, TILE_GAP, TILE_ROW = 32, 8, 50 -- a weapon's tile, the room between two, a row with its price
 local WAY = 30 -- a way's icon
 local RANKS_ROOM = 44 -- the line of the old ranks, under the list
@@ -32,7 +33,8 @@ local query = "" -- what is looked for (folded), "" for nothing
 -- The inks, on the night of a Wanderer window.
 local ink = {
 	text = Skin.COLORS.text, soft = Skin.COLORS.soft, muted = Skin.COLORS.muted, title = Skin.COLORS.gold,
-	rule = { 1, 0.82, 0, 0.2 }, hover = { 1, 1, 1, 0.05 }, track = { 1, 1, 1, 0.08 }, good = Skin.COLORS.good,
+	rule = { Skin.COLORS.gold[1], Skin.COLORS.gold[2], Skin.COLORS.gold[3], 0.2 }, hover = { 1, 1, 1, rawget(Skin, "HOVER") or 0.05 },
+	track = { 1, 1, 1, 0.08 }, good = Skin.COLORS.good,
 }
 
 local function Ink(text, color)
@@ -402,7 +404,7 @@ function ns.WaysGrid(parent, width, size)
 		button.glow:SetSize(size + 20, size + 20)
 		button.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
 		button.glow:SetBlendMode("ADD")
-		button.glow:SetVertexColor(1, 0.75, 0.25, 0.7)
+		button.glow:SetVertexColor(Skin.COLORS.warn[1], Skin.COLORS.warn[2], Skin.COLORS.warn[3], 0.7)
 		button.label = Skin.Text(button, "GameFontNormal", "text")
 		button.label:SetPoint("LEFT", button.icon, "RIGHT", 9, 0)
 		button.label:SetPoint("RIGHT", button, "RIGHT", 0, 0)
@@ -501,7 +503,7 @@ local function Tile(index)
 	tile.price:SetPoint("TOP", tile.icon, "BOTTOM", 0, -3)
 	local hover = tile:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints(tile.icon)
-	hover:SetColorTexture(1, 1, 1, 0.15)
+	hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
 	tile:RegisterForClicks("LeftButtonUp", "RightButtonUp") tile.padRight = true
 	tile:SetScript("OnClick", function(self, mouse)
 		local entry = self.entry
@@ -512,16 +514,14 @@ local function Tile(index)
 	tile:SetScript("OnEnter", function(self)
 		local entry = self.entry
 		if not entry then return end
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:AddLine(entry.name, ink.title[1], ink.title[2], ink.title[3])
 		local state = entry.status == "known" and L.CHIP_KNOWN or entry.ignored and L.CHIP_IGNORED
 			or entry.status == "now" and L.CHIP_NOW or L.SECTION_LEVEL:format(entry.level)
-		GameTooltip:AddLine(state, 1, 1, 1)
+		local lines = { { entry.name, ink.title[1], ink.title[2], ink.title[3] }, { state, 1, 1, 1 } }
 		if entry.status ~= "known" then
-			for _, npc in ipairs(entry.masters or {}) do GameTooltip:AddLine(L.TAUGHT_BY:format(ns.MasterText(npc)), ink.soft[1], ink.soft[2], ink.soft[3], true) end
-			GameTooltip:AddLine(L.PIN_MASTER_HINT, ink.muted[1], ink.muted[2], ink.muted[3], true)
+			for _, npc in ipairs(entry.masters or {}) do lines[#lines + 1] = { L.TAUGHT_BY:format(ns.MasterText(npc)), ink.soft[1], ink.soft[2], ink.soft[3] } end
+			lines[#lines + 1] = { L.PIN_MASTER_HINT, ink.muted[1], ink.muted[2], ink.muted[3] }
 		end
-		GameTooltip:Show()
+		Skin.ShowTip(self, lines, "ANCHOR_LEFT")
 	end)
 	tile:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	view.tiles[index] = tile
@@ -678,7 +678,7 @@ function ns.BuildPage()
 	page:Hide()
 	-- On the left: everything, in sections.
 	list = Skin.Table(page, {
-		width = LEFT, rows = 30, rowHeight = ROW, titles = false,
+		width = LEFT, rows = 30, rowHeight = ROW, titles = false, padRight = true,
 		columns = { { key = "price", width = 80 } },
 		onClick = function(row, mouse)
 			if row.entry and mouse == "RightButton" then ns.EntryMenu(row.entry) end
@@ -730,6 +730,8 @@ function ns.BuildPage()
 	view.sumNow = Ledger(right, sumsRule, 2)
 	view.sumNext = Ledger(right, view.sumNow)
 	view.sumAll = Ledger(right, view.sumNext)
+	-- (a controller stops on each for its tooltip)
+	view.sumNow.padTip, view.sumNext.padTip, view.sumAll.padTip = true, true, true
 	Skin.Tooltip(view.sumNow, L.SUM_NOW_DESC)
 	Skin.Tooltip(view.sumNext, L.SUM_NEXT_DESC)
 	Skin.Tooltip(view.sumAll, L.SUM_ALL_DESC)
@@ -795,7 +797,7 @@ function ns.BuildPage()
 	view.ranks = CreateFrame("Button", nil, page)
 	view.ranks:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
 	view.ranks:SetSize(LEFT, RANKS_ROOM - 8)
-	view.ranks:RegisterForClicks("RightButtonUp") view.ranks.padRight = true
+	view.ranks:RegisterForClicks("RightButtonUp") -- (the controller's bottom button opens it too)
 	view.ranks:SetScript("OnClick", function(self) ns.RanksMenu(self) end)
 	Skin.Tooltip(view.ranks, function() return ns.RanksTooltip() end)
 	view.ranks:Hide()

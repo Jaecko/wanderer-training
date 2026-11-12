@@ -96,7 +96,8 @@ local function Create()
 	function view.MakeButton()
 		local button = CreateFrame("Button", nil, view)
 		button:SetSize(CELL, CELL)
-		button:RegisterForClicks("LeftButtonUp", "RightButtonUp") button.padRight = true
+		button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		button.padRight, button.padRightWord = true, L.PAD_REMOVE_POINT
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("TOPLEFT", 1, -1)
 		button.icon:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -106,7 +107,7 @@ local function Create()
 		button.rank:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
 		local hover = button:CreateTexture(nil, "HIGHLIGHT")
 		hover:SetAllPoints(button.icon)
-		hover:SetColorTexture(1, 1, 1, 0.12)
+		hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
 		button:SetScript("OnClick", function(self, mouse)
 			local ok
 			if mouse == "RightButton" then ok = ns.PlanRemove(self.node) else ok = ns.PlanAdd(self.node) end
@@ -114,8 +115,8 @@ local function Create()
 		end)
 		button:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			if self.node.spell then GameTooltip:SetSpellByID(self.node.spell) else GameTooltip:AddLine("?") end
-			GameTooltip:AddLine(L.PLAN_TIP, Skin.COLORS.blue[1], Skin.COLORS.blue[2], Skin.COLORS.blue[3], true)
+			if self.node.spell then GameTooltip:SetSpellByID(self.node.spell) else GameTooltip:AddLine("\194\183", Skin.COLORS.muted[1], Skin.COLORS.muted[2], Skin.COLORS.muted[3]) end
+			GameTooltip:AddLine((U.UsingPad and U.UsingPad()) and L.PLAN_TIP_PAD or L.PLAN_TIP, Skin.COLORS.blue[1], Skin.COLORS.blue[2], Skin.COLORS.blue[3], true)
 			GameTooltip:Show()
 		end)
 		button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -154,6 +155,13 @@ function ns.ToggleTalents()
 	if window and window:IsShown() then return window:Hide() end
 	if ns.OpenTalentCalculator and ns.OpenTalentCalculator() then return end
 	if not window then Create() end
+	window:Show()
+end
+
+-- Training's own window, shown and in front (a controller plans there: the game's tree is out of its reach).
+function ns.ShowOwnTalents()
+	if not window then Create() end
+	if window:IsShown() then return Skin.Front and Skin.Front(window) end
 	window:Show()
 end
 

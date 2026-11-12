@@ -718,7 +718,7 @@ function ns.RankPlaced(slot)
 	held = nil
 	if not ns.BestRank(id) or ns.DB().keepRanks[id] then return false end
 	ns.KeepRank(id, true)
-	W.Print(L.RANKS_KEPT_SAID:format(Name(id) or ("#" .. id), RankText(id)))
+	W.Print(((U.UsingPad and U.UsingPad()) and L.RANKS_KEPT_SAID_PAD or L.RANKS_KEPT_SAID):format(Name(id) or ("#" .. id), RankText(id)))
 	return true
 end
 
@@ -756,7 +756,7 @@ function ns.RanksTooltip()
 		end
 	end
 	lines[#lines + 1] = { " " }
-	lines[#lines + 1] = { L.RANKS_HINT, 0.6, 0.57, 0.5 }
+	lines[#lines + 1] = { (U.UsingPad and U.UsingPad()) and L.RANKS_HINT_PAD or L.RANKS_HINT, 0.6, 0.57, 0.5 }
 	if (ns.OldRanks().macros or {})[1] then lines[#lines + 1] = { L.MACROS_HINT, 0.6, 0.57, 0.5 } end
 	if Fighting() then lines[#lines + 1] = { L.RANKS_COMBAT, 1, 0.45, 0.35 } end
 	return lines
@@ -774,7 +774,7 @@ function ns.RanksMenu(owner)
 			end }
 	end
 	if not rows[1] then return end
-	return W.Skin.ActionCard(owner, { title = L.RANKS_KEEP_TITLE, rows = rows, foot = L.RANKS_FORGET_DESC, width = 280 })
+	return W.Skin.ActionCard(owner, { title = L.RANKS_KEEP_TITLE, rows = rows, foot = (U.UsingPad and U.UsingPad()) and L.RANKS_FORGET_DESC_PAD or L.RANKS_FORGET_DESC, width = 280 })
 end
 
 -- Whether the line offers to undo (nothing old left, the last update still undoable).
@@ -886,7 +886,7 @@ end
 -- rank, its level and price (the trainer's once seen there); a rank not learned yet, the price seen at your
 -- trainer; a spell outside what you play, why, in one line. Lines added only, out of a fight.
 
-local QUIET = { 0.6, 0.57, 0.5 }
+local QUIET = (Wanderer and Wanderer.Skin and Wanderer.Skin.COLORS.muted) or { 0.64, 0.6, 0.52 }
 
 -- The lines for a spell: { { text, r, g, b } } (nil: nothing to say).
 function ns.SpellTipLines(id)

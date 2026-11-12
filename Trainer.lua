@@ -15,7 +15,8 @@ local Skin = W and W.Skin
 local WIDTH, HEIGHT = 900, 600
 local LIST = 520 -- the list's width
 local GAP = 30
-local ROW = 36
+-- (the kit's row: the list fits the window; read as it is, an older Wanderer has none)
+local ROW = (Skin and rawget(Skin, "ROW") or { normal = 34 }).normal
 local SEARCH_ROOM = 34 -- the field to look for a spell, over the list
 local WAY = 30
 
@@ -122,6 +123,8 @@ local function Read()
 			}
 			local skillName, skillRank, hasSkill = U.Safe(GetTrainerServiceSkillReq, index)
 			if U.Clean(skillName) and not U.Clean(hasSkill) then service.skill = U.Clean(skillRank) end
+			-- (the skill it asks, reached or not: a profession's list goes in that order)
+			service.rank = U.Clean(skillName) and tonumber(U.Clean(skillRank)) or nil
 			service.later = state == "unavailable" and service.level > level and service.level or nil
 			service.entry = byName[name .. "|" .. (sub or "")] or byName[name .. "|"]
 			if service.entry then
@@ -247,10 +250,14 @@ local function Gather(class)
 		end
 		if into then into[#into + 1] = service end
 	end
-	table.sort(groups.later, function(a, b)
+	-- (in the order you reach them: the skill a recipe asks at a profession's trainer, the level elsewhere; then the
+	-- trainer's own order)
+	local function Order(a, b)
+		if (a.rank or 0) ~= (b.rank or 0) then return (a.rank or 0) < (b.rank or 0) end
 		if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
-		return a.name < b.name
-	end)
+		return a.index < b.index
+	end
+	for _, group in pairs(groups) do table.sort(group, Order) end
 	Section(L.SECTION_NOW, groups.now)
 	Section(L.SECTION_OFFSPEC, groups.offSpec, L.SECTION_OFFSPEC_NOTE)
 	Section(L.SECTION_IGNORED, groups.ignored)
@@ -422,6 +429,8 @@ local function Create()
 	Skin.Dress(window, { "TOPLEFT", UIParent, "TOPLEFT", 24, -110 }, "trainingTrainerPos")
 	window:SetSize(WIDTH, HEIGHT)
 	local _, title, margin = ns.Header(window, L.TRAINER_TITLE, 10, "GameFontNormalLarge")
+	-- (the heading's "?": what this window offers at the trainer)
+	if Skin.Help then Skin.Help(window, L.TRAINER_HELP, "HEADING") end
 	view.title = title
 	-- Your money, and the game's own window, on the right (the cross after them).
 	local game = Skin.SmallButton(window, L.GAME_WINDOW, function() ns.UseGameTrainer() end, L.GAME_WINDOW_DESC)
@@ -433,7 +442,7 @@ local function Create()
 	rule:SetPoint("RIGHT", window, "RIGHT", -margin, 0)
 	-- On the left, everything the trainer teaches.
 	list = Skin.Table(window, {
-		width = LIST, rows = 14, rowHeight = ROW, titles = false,
+		width = LIST, rows = 14, rowHeight = ROW, titles = false, padRight = true,
 		columns = { { key = "price", width = 140 } },
 		onClick = function(row, mouse)
 			if mouse == "RightButton" and row.service then Menu(row) end

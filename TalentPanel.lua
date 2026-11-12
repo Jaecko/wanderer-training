@@ -16,8 +16,8 @@ local Skin = W and W.Skin
 local Safe, Clean = U and U.Safe, U and U.Clean
 
 local PANEL_WIDTH = 360
-local BLUE = Skin and Skin.COLORS.blue or { 0.61, 0.78, 0.96 }
-local GOLD = Skin and Skin.COLORS.gold or { 1, 0.82, 0 }
+local BLUE = Skin and Skin.COLORS.blue
+local GOLD = Skin and Skin.COLORS.gold
 
 local frame -- the game's talent window (PlayerSpellsFrame.TalentsFrame)
 local overlay, badges, catchers = nil, {}, {}
@@ -89,7 +89,8 @@ local function Catcher(node)
 	local catcher = catchers[node.id]
 	if catcher then return catcher end
 	catcher = CreateFrame("Button", nil, overlay)
-	catcher:RegisterForClicks("LeftButtonUp", "RightButtonUp") catcher.padRight = true
+	catcher:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	catcher.padRight, catcher.padRightWord = true, L.PAD_REMOVE_POINT
 	local hover = catcher:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints()
 	hover:SetColorTexture(BLUE[1], BLUE[2], BLUE[3], 0.18)
@@ -275,16 +276,19 @@ local function DrawEffects(lines)
 	local planned = ns.PlanRanks(steps)
 	if not node then
 		local nextNode, rank, level = ns.NextTalent()
+		-- (a controller never hovers the game's tree: no hint to hover it)
 		if not nextNode then
-			lines[#lines + 1] = Skin.Colorize(L.EFFECTS_HINT, "soft")
+			if not (U.UsingPad and U.UsingPad()) then lines[#lines + 1] = Skin.Colorize(L.EFFECTS_HINT, "soft") end
 			return
 		end
 		lines[#lines + 1] = Skin.Colorize(L.EFFECTS_NEXT:format(level), "kicker")
 		node = nextNode
 		lines[#lines + 1] = ("|T%s:18|t  %s  %s"):format(SpellIcon(node), Skin.Colorize(SpellName(node), "gold"), Skin.Colorize(L.RANK_OF:format(rank, node.most), "muted"))
 		EffectLines(lines, node, rank - 1, rank, L.EFFECTS_THIS_POINT)
-		lines[#lines + 1] = " "
-		lines[#lines + 1] = Skin.Colorize(L.EFFECTS_HINT, "muted")
+		if not (U.UsingPad and U.UsingPad()) then
+			lines[#lines + 1] = " "
+			lines[#lines + 1] = Skin.Colorize(L.EFFECTS_HINT, "muted")
+		end
 		return
 	end
 	local have, plan = node.ranks or 0, planned[node.id] or 0
@@ -418,7 +422,7 @@ local function OrderRow(index)
 	row.done:SetVertexColor(GOLD[1], GOLD[2], GOLD[3])
 	local hover = row:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints()
-	hover:SetColorTexture(1, 1, 1, 0.06)
+	hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
 	row:SetScript("OnEnter", function(self)
 		pointed = self.node
 		ns.DrawOverlay()
@@ -522,7 +526,7 @@ function ns.DrawTalentPanel()
 	view.compareBox:Refresh()
 	view.inspect:SetEnabled(ns.inspected ~= nil)
 	view.tie:SetText(ns.PlanTiedTo() and L.PLAN_UNTIE or L.PLAN_TIE)
-	view.honesty:SetText(L.DATA_HONESTY:format((Clean(Safe(_G.GetBuildInfo))) or "?"))
+	view.honesty:SetText(L.DATA_HONESTY)
 end
 
 -- (the guard with the rest: it stands on the game's window, the calculator open or not)
@@ -585,7 +589,13 @@ local function MakePanel()
 		panel:Hide()
 	end)
 	local _, title, margin = Skin.Header(panel, "Wanderer", L.CALC_TITLE, { settings = "ext:training" })
-	Skin.Help(panel, L.CALC_HELP, "HEADING")
+	-- (under a controller: Simulate opens your own planner, its words then)
+	local help = Skin.Help(panel, L.CALC_HELP, "HEADING")
+	if help then
+		help:HookScript("OnEnter", function(self)
+			if (U.UsingPad and U.UsingPad()) then Skin.ShowTip(self, L.CALC_HELP_PAD, "ANCHOR_BOTTOM") end
+		end)
+	end
 	view = {}
 	-- The plan shown, undo and done again.
 	view.plans = Skin.Dropdown(panel, function()
@@ -600,23 +610,33 @@ local function MakePanel()
 	view.redo:SetPoint("LEFT", view.undo, "RIGHT", 2, 0)
 	view.redo.glyph:SetTexCoord(2 / 16, 1 / 16, 0, 1)
 	-- Simulate.
-	view.sim = Skin.Button(panel, L.SIM_START, function() SetSimulating(not simulating) end, "main")
+	-- (a controller cannot reach the game's tree under the overlay: Training's own planner instead)
+	view.sim = Skin.Button(panel, L.SIM_START, function()
+		if U.UsingPad and U.UsingPad() and ns.ShowOwnTalents then return ns.ShowOwnTalents() end
+		SetSimulating(not simulating)
+	end, "main")
 	view.sim:SetPoint("TOPLEFT", view.plans, "BOTTOMLEFT", 0, -10)
 	view.sim:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
 	view.sim.padFirst = true
-	Skin.Tooltip(view.sim, L.SIM_DESC)
+	Skin.Tooltip(view.sim, function() return (U.UsingPad and U.UsingPad()) and L.SIM_DESC_PAD or L.SIM_DESC end)
 	-- The level seen: arrows and the wheel.
 	local levelRow = CreateFrame("Frame", nil, panel)
 	levelRow:SetHeight(22)
 	levelRow:SetPoint("TOPLEFT", view.sim, "BOTTOMLEFT", 0, -10)
 	levelRow:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
 	local function Step(by) ns.SetViewLevel((ns.viewLevel or ns.TALENT_LAST_LEVEL) + by) end
-	local down = Skin.GlyphButton(levelRow, "back", 12, L.LEVEL_DOWN, function() Step(IsShiftKeyDown() and -10 or -1) end)
+	local function Pad() return U.UsingPad and U.UsingPad() end
+	local down = Skin.GlyphButton(levelRow, "back", 12, function() return Pad() and L.LEVEL_DOWN_PAD or L.LEVEL_DOWN end,
+		function() Step(IsShiftKeyDown() and -10 or -1) end)
 	down:SetPoint("LEFT")
 	view.level = Skin.Text(levelRow, "GameFontHighlightSmall", "text")
 	view.level:SetPoint("LEFT", down, "RIGHT", 6, 0)
-	local up = Skin.GlyphButton(levelRow, "chevron", 12, L.LEVEL_UP, function() Step(IsShiftKeyDown() and 10 or 1) end)
+	local up = Skin.GlyphButton(levelRow, "chevron", 12, function() return Pad() and L.LEVEL_UP_PAD or L.LEVEL_UP end,
+		function() Step(IsShiftKeyDown() and 10 or 1) end)
 	up:SetPoint("LEFT", view.level, "RIGHT", 6, 0)
+	-- (a controller has no Shift here: its left button jumps ten levels)
+	down.padAlt, down.padAltWord = function() Step(-10) end, L.PAD_TEN_LEVELS
+	up.padAlt, up.padAltWord = function() Step(10) end, L.PAD_TEN_LEVELS
 	levelRow:EnableMouseWheel(true)
 	levelRow:SetScript("OnMouseWheel", function(_, delta) Step(delta > 0 and 1 or -1) end)
 	Skin.Tooltip(levelRow, L.LEVEL_DESC)

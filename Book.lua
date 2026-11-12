@@ -60,6 +60,8 @@ local function Window()
 	window:SetSize(960, 720)
 	-- (the page says what it is in the heading: "Wanderer", then what your trainers have for you)
 	local _, _, margin = ns.Header(window, L.HEADING)
+	-- (the heading's "?": what this page is)
+	if Skin.Help then Skin.Help(window, L.BOOK_HELP, "HEADING") end
 	window.content = CreateFrame("Frame", nil, window)
 	window.content:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -(margin + 40))
 	window.content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -margin, margin)
@@ -97,7 +99,8 @@ end
 local function Art(button, atlas)
 	local texture = button:CreateTexture(nil, "ARTWORK", nil, 1)
 	if not pcall(texture.SetAtlas, texture, atlas, true) or not texture:GetAtlas() then
-		texture:SetColorTexture(1, 0.82, 0, 0)
+		local gold = Skin.COLORS.gold
+		texture:SetColorTexture(gold[1], gold[2], gold[3], 0)
 	end
 	texture:SetPoint("BOTTOM", 0, 1)
 	return texture
@@ -145,6 +148,8 @@ end
 
 function ns.Toggle()
 	if window and window:IsShown() then return window:Hide() end
+	-- (Training switched off: said, nothing opened)
+	if not Settings() then return W.Print(L.EXT_TURNED_OFF:format(L.TITLE)) end
 	ns.Open()
 end
 
@@ -152,7 +157,7 @@ end
 
 BINDING_HEADER_WANDERERTRAINING = "Wanderer Training"
 BINDING_NAME_WANDERERTRAINING_TOGGLE = L.TITLE
-function WandererTraining_Toggle() ns.Toggle() end
+function WandererTraining_Toggle() if ns.ready then ns.Toggle() end end -- (nothing before Init has passed Wanderer's check)
 
 -- A new level: what it brings, said briefly (an option).
 local function LevelUp(level)
@@ -211,7 +216,9 @@ function ns.Init()
 			o.Checkbox("training", "talentsGuard", L.GUARD_OPTION, L.GUARD_OPTION_DESC)
 
 			o.Header(L.RANKS_KEPT_OPTION, { advanced = true })
-			o.Button(L.RANKS_KEPT_OPTION, L.RANKS_FORGET, L.RANKS_FORGET_DESC, function() ns.ForgetKeptRanks() end)
+			local forget = o.Button(L.RANKS_KEPT_OPTION, L.RANKS_FORGET, L.RANKS_FORGET_DESC, function() ns.ForgetKeptRanks() end)
+			-- (with a controller: the top button keeps a rank)
+			if type(forget) == "table" then forget.descPad = L.RANKS_FORGET_DESC_PAD end
 		end,
 	})
 	SLASH_WANDERERTRAINING1 = "/wtraining"
@@ -279,6 +286,9 @@ function ns.Init()
 		end
 		ns.Changed()
 	end)
+	-- Wanderer's town card: the trainer's line (Town.lua).
+	if ns.InitTown then ns.InitTown() end
+	ns.ready = true
 end
 
 if W and W.WhenLoaded then W.WhenLoaded(ADDON, ns.Init) elseif W and W.Print then W.Print(L.NEEDS_WANDERER) end

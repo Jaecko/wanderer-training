@@ -11,6 +11,7 @@ local L = ns.L
 
 local W = Wanderer
 local U = W and W.Util
+local Skin = W and W.Skin
 local Safe, Clean = U and U.Safe, U and U.Clean
 
 ns.TAG_READ, ns.TAG_CALC, ns.TAG_UNKNOWN = "read", "calc", "unknown"
@@ -89,7 +90,7 @@ function ns.TalentChange(node, fromRank, toRank)
 		if before ~= nil and before ~= number.value and toRank > (fromRank or 0) then
 			moves[#moves + 1] = { from = before, to = number.value, unit = number.unit, at = number.from }
 			pieces[#pieces + 1] = after:sub(last, number.from - 1)
-			pieces[#pieces + 1] = "|cffffd100" .. Short(before) .. " → " .. Short(number.value) .. "|r"
+			pieces[#pieces + 1] = Skin.Colorize(Short(before) .. " → " .. Short(number.value), "gold")
 			last = number.to + 1
 		end
 	end
