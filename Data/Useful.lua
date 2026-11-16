@@ -13,7 +13,7 @@ local USEFUL = ns.USEFUL
 -- Where rank 1 is known from level 1 and absent from the file (Wrath, Healing Touch, Healing Wave,
 -- Lightning Bolt, Seal of Righteousness, Holy Light, Prowl, Rip, Maul...), the key is the first trainable rank
 -- and `first` is never used for that family (it would mean "buy rank 2").
--- Names checked against ~/.voile-tools/forever-db2-next/SpellName.csv.
+-- Names checked against ~/.wanderer-tools/forever-db2-next/SpellName.csv.
 
 USEFUL.DRUID = {
 	[1126] = { all = true }, -- Mark of the Wild
