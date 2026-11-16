@@ -264,7 +264,11 @@ function ns.BuildNow(level)
 			-- (a skill too low for it: the poisons of a rogue)
 			for _, need in ipairs(spell.skills or {}) do
 				local rank = SkillRank(need.skill)
-				if rank and rank < need.level then entry.skill = need.level end
+				if rank and rank < need.level then
+					local skillSpell = SKILL_SPELLS[need.skill]
+					entry.skill = need.level
+					entry.skillName = skillSpell and C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(skillSpell) or nil
+				end
 			end
 			Settle(entry, level)
 			entries[#entries + 1] = entry

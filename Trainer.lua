@@ -11,6 +11,8 @@ local L = ns.L
 local W = Wanderer
 local U = W and W.Util
 local Skin = W and W.Skin
+-- (the game's modified clicks on a link: Shift links it in the chat, Ctrl tries an item on; the page's, Page.lua)
+local ItemClick = ns.ItemClick
 
 local WIDTH, HEIGHT = 900, 600
 local LIST = 520 -- the list's width
@@ -105,7 +107,8 @@ local function Entries()
 	return byName, true
 end
 
--- { index, name, sub, icon, cost, state ("available", "unavailable", "used"), level, skill, entry }
+-- { index, name, sub, icon, cost, state ("available", "unavailable", "used"), level, skill, skillName, earlier
+-- (an earlier rank not known), entry }
 local function Read()
 	wipe(services)
 	local prices = {}
@@ -122,11 +125,19 @@ local function Read()
 				level = U.Clean(U.Safe(GetTrainerServiceLevelReq, index)) or 0,
 			}
 			local skillName, skillRank, hasSkill = U.Safe(GetTrainerServiceSkillReq, index)
-			if U.Clean(skillName) and not U.Clean(hasSkill) then service.skill = U.Clean(skillRank) end
+			if U.Clean(skillName) and not U.Clean(hasSkill) then
+				service.skill, service.skillName = U.Clean(skillRank), U.Clean(skillName)
+			end
+			-- (an earlier rank or another spell asked first, and not known: the game's own list of them)
+			for need = 1, (U.Clean(U.Safe(_G.GetTrainerServiceNumAbilityReq, index)) or 0) do
+				local _, met = U.Safe(_G.GetTrainerServiceAbilityReq, index, need)
+				if not U.Clean(met) then service.earlier = true end
+			end
 			-- (the skill it asks, reached or not: a profession's list goes in that order)
 			service.rank = U.Clean(skillName) and tonumber(U.Clean(skillRank)) or nil
 			service.later = state == "unavailable" and service.level > level and service.level or nil
 			service.entry = byName[name .. "|" .. (sub or "")] or byName[name .. "|"]
+			if service.entry and service.entry.missing then service.earlier = true end
 			if service.entry then
 				mine = true
 				if service.entry.status == "now" and state == "available" then prices[#prices + 1] = service end
@@ -139,12 +150,18 @@ local function Read()
 	ns.NotePrices(services)
 	return mine
 end
+ns.TrainerServices = function() Read() return services end -- (tests)
+
+-- What a trainer teaches beyond your class's spells (a profession's recipe, a weapon, riding): set aside by you, it
+-- is never bought with the others (kept per character, beside the class's spells set aside).
+local function AsideKey(service) return "trainer:" .. (service.name or "") .. "|" .. (service.sub or "") end
+local function Aside(service) return not service.entry and ns.DB().ignored[AsideKey(service)] == true end
 
 -- What counts: on a class trainer, what Wanderer Training counts (what you play, counted anyway; not set aside);
--- everything elsewhere.
+-- everything elsewhere, but what you set aside.
 local function Counts(service)
 	local entry = service.entry
-	if not entry then return true end
+	if not entry then return not Aside(service) end
 	return entry.counts
 end
 
@@ -241,7 +258,7 @@ local function Gather(class)
 			into = ns.DB().showKnown and groups.used
 		elseif service.state == "unavailable" then
 			into = groups.later
-		elseif entry and entry.ignored then
+		elseif (entry and entry.ignored) or Aside(service) then
 			into = groups.ignored
 		elseif class and not Counts(service) then
 			into = groups.offSpec
@@ -271,6 +288,20 @@ local function ActionOf(service)
 end
 
 local Menu -- (below)
+
+-- A row's actions: the class's own (Page.lua), or for anything else it teaches, set aside or counted again.
+local function Actions(service, learn)
+	local actions = ns.EntryActions(service.entry, { learn = learn, noPin = true })
+	if not service.entry and service.state ~= "used" then
+		local key = AsideKey(service)
+		if Aside(service) then
+			actions[#actions + 1] = { text = L.COUNT_AGAIN, glyph = "undo", hint = L.COUNT_AGAIN_DESC, onClick = function() ns.Ignore(key, false) end }
+		else
+			actions[#actions + 1] = { text = L.IGNORE, glyph = "close", hint = L.IGNORE_DESC, onClick = function() ns.Ignore(key, true) end }
+		end
+	end
+	return actions
+end
 
 local function Dress(line)
 	if line.wandererDressed then return end
@@ -306,6 +337,7 @@ local function DrawList()
 			local price = service.state == "used" and "" or service.cost > 0 and U.Coins(service.cost) or "-"
 			values = { price = price }
 			chip, tone = ns.EntryChip(service.entry, service)
+			if not chip and Aside(service) then chip, tone = L.CHIP_IGNORED, "grey" end
 			actionText, action = ActionOf(service)
 		end
 		line:Fill(row, false, values, chip, tone)
@@ -317,7 +349,7 @@ local function DrawList()
 		line.act:SetLabel(actionText or "")
 		line.act.run = row and action or nil
 		-- Its "..." (left of the price, Learn showing over the price under the mouse).
-		ns.ShowMore(line, service ~= nil and #ns.EntryActions(service.entry, { learn = action, noPin = true }) > 0)
+		ns.ShowMore(line, service ~= nil and #Actions(service, action) > 0)
 		ns.MarkFound(line, service ~= nil and query ~= "" and ns.Found(service.name, query))
 		ns.HoverRow(line)
 	end
@@ -330,7 +362,9 @@ end
 function Menu(row, owner)
 	local service = row.service
 	local _, learn = ActionOf(service)
-	return ns.EntryMenu(service.entry, owner, { title = service.name, learn = learn, noPin = true })
+	local actions = Actions(service, learn)
+	if not actions[1] then return end
+	return Skin.ActionCard(owner, { title = service.name, rows = actions, atCursor = owner == nil })
 end
 
 -- The right column ---------------------------------------------------------------------------------------------
@@ -445,7 +479,13 @@ local function Create()
 		width = LIST, rows = 14, rowHeight = ROW, titles = false, padRight = true,
 		columns = { { key = "price", width = 140 } },
 		onClick = function(row, mouse)
-			if mouse == "RightButton" and row.service then Menu(row) end
+			-- (Shift: the spell or the recipe linked in the chat, as at the game's trainer)
+			local service = row.service
+			if mouse == "LeftButton" and service then
+				local link = service.entry and service.entry.link or U.Clean(U.Safe(_G.GetTrainerServiceItemLink, service.index))
+				if ItemClick(link) then return end
+			end
+			if mouse == "RightButton" and service then Menu(row) end
 		end,
 		onDraw = DrawList,
 	})

@@ -390,6 +390,33 @@ local function DrawShare(lines)
 	end
 end
 
+-- A point moved in the order (a row dragged, or its arrows): refused in words when the rules would break.
+local function MovePoint(from, to)
+	local ok, node, why, need, rows = ns.PlanMove(from, to)
+	if ok or not node then return ok end
+	local reason = RefusalText(node, why, need, rows)
+	ns.SayText(L.MOVE_REFUSED:format(SpellName(node), reason or ""))
+	return false
+end
+
+-- The place a dragged row would go to, from the cursor's height (1 to the plan's points).
+local function DropIndex()
+	local scale = view.content:GetEffectiveScale()
+	local _, y = GetCursorPosition()
+	local top = view.content:GetTop()
+	if not (top and scale and scale > 0) then return nil end
+	local index = math.floor((top - y / scale) / ROW) + 1
+	return math.max(1, math.min(#ns.PlanSteps(), index))
+end
+
+-- The arrows on the row under the mouse (or in the pad's focus), the rank and the tick meanwhile hidden.
+local function Arrows(row, on)
+	row.up:SetShown(on and row.index > 1)
+	row.down:SetShown(on and row.index < #ns.PlanSteps())
+	row.rank:SetShown(not on)
+	if on then row.done:Hide() else row.done:SetShown(row.taken and true or false) end
+end
+
 local function OrderRow(index)
 	local row = view.orderRows[index]
 	if row then return row end
@@ -423,12 +450,48 @@ local function OrderRow(index)
 	local hover = row:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints()
 	hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+	-- Moved: dragged to another place, or one place up or down with its arrows.
+	row.up = Skin.GlyphButton(row, "up", 10, L.MOVE_UP, function(self) MovePoint(self:GetParent().index, self:GetParent().index - 1) end)
+	row.up:SetPoint("RIGHT", row, "RIGHT", -22, 0)
+	row.down = Skin.GlyphButton(row, "down", 10, L.MOVE_DOWN, function(self) MovePoint(self:GetParent().index, self:GetParent().index + 1) end)
+	row.down:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+	for _, arrow in ipairs({ row.up, row.down }) do
+		arrow:Hide()
+		arrow:HookScript("OnLeave", function(self)
+			local parent = self:GetParent()
+			if not parent:IsMouseOver() then Arrows(parent, false) end
+		end)
+	end
+	row:RegisterForDrag("LeftButton")
+	row:SetScript("OnDragStart", function(self)
+		view.dragFrom = self.index
+		view.dropLine:Show()
+		view.dropLine:SetScript("OnUpdate", function(line)
+			local to = DropIndex()
+			if not to then return end
+			line:ClearAllPoints()
+			local edge = to > view.dragFrom and to or to - 1
+			line:SetPoint("TOPLEFT", view.content, "TOPLEFT", 0, -edge * ROW + 1)
+			line:SetPoint("RIGHT", view.content, "RIGHT", 0, 0)
+		end)
+	end)
+	row:SetScript("OnDragStop", function()
+		local from, to = view.dragFrom, DropIndex()
+		view.dragFrom = nil
+		view.dropLine:SetScript("OnUpdate", nil)
+		view.dropLine:Hide()
+		if from and to and from ~= to then MovePoint(from, to) end
+	end)
 	row:SetScript("OnEnter", function(self)
 		pointed = self.node
+		Arrows(self, true)
 		ns.DrawOverlay()
+		if Skin.ShowTip then Skin.ShowTip(self, { L.MOVE_HINT }, "ANCHOR_RIGHT") end
 	end)
-	row:SetScript("OnLeave", function()
+	row:SetScript("OnLeave", function(self)
 		pointed = nil
+		if not (self.up:IsMouseOver() or self.down:IsMouseOver()) then Arrows(self, false) end
+		GameTooltip:Hide()
 		ns.DrawOverlay()
 	end)
 	view.orderRows[index] = row
@@ -449,7 +512,7 @@ local function DrawOrder()
 		local taken = rank <= (node.ranks or 0)
 		local isNext = index == nextIndex
 		local beyond = ns.viewLevel and index > ns.PointsAt(ns.viewLevel)
-		row.node = node
+		row.node, row.index, row.taken = node, index, taken
 		row:ClearAllPoints()
 		row:SetPoint("TOPLEFT", view.content, "TOPLEFT", 0, -(index - 1) * ROW)
 		row:SetPoint("RIGHT", view.content, "RIGHT", 0, 0)
@@ -459,6 +522,7 @@ local function DrawOrder()
 		row.name:SetText(SpellName(node))
 		row.rank:SetText(rank .. "/" .. node.most)
 		row.done:SetShown(taken)
+		Arrows(row, row:IsMouseOver())
 		row.bar:SetShown(isNext)
 		if isNext then
 			row.ground:SetColorTexture(BLUE[1], BLUE[2], BLUE[3], 0.16)
@@ -468,7 +532,8 @@ local function DrawOrder()
 			local c = Skin.COLORS[taken and "muted" or "text"]
 			row.name:SetTextColor(c[1], c[2], c[3])
 		end
-		row:SetAlpha(beyond and 0.4 or 1)
+		-- (beyond the viewed level: dimmed, still readable)
+		row:SetAlpha(beyond and 0.6 or 1)
 		row:Show()
 	end
 	for index = #steps + 1, #view.orderRows do view.orderRows[index]:Hide() end
@@ -546,12 +611,19 @@ function ns.HoverTalent(node)
 	ns.DrawTalentPanel()
 end
 
+-- A line said a few seconds under the panel.
+function ns.SayText(text)
+	if not (view and text) then return end
+	view.said:SetText(text)
+	view.said:Show()
+	C_Timer.After(4, function() if view.said:GetText() == text then view.said:Hide() end end)
+end
+
 function ns.SayRefused(node, why, need)
 	if not view then return end
 	if not ns.TalentTreeNow() then return end
 	local _, rows = ns.PlanRanks(ns.PlanSteps())
-	local text = RefusalText(node, why, need, rows)
-	if text then view.said:SetText(text) view.said:Show() C_Timer.After(4, function() if view.said:GetText() == text then view.said:Hide() end end) end
+	ns.SayText(RefusalText(node, why, need, rows))
 end
 
 local function SetSimulating(on)
@@ -626,12 +698,12 @@ local function MakePanel()
 	levelRow:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
 	local function Step(by) ns.SetViewLevel((ns.viewLevel or ns.TALENT_LAST_LEVEL) + by) end
 	local function Pad() return U.UsingPad and U.UsingPad() end
-	local down = Skin.GlyphButton(levelRow, "back", 12, function() return Pad() and L.LEVEL_DOWN_PAD or L.LEVEL_DOWN end,
+	local down = Skin.GlyphButton(levelRow, "minus", 12, function() return Pad() and L.LEVEL_DOWN_PAD or L.LEVEL_DOWN end,
 		function() Step(IsShiftKeyDown() and -10 or -1) end)
 	down:SetPoint("LEFT")
 	view.level = Skin.Text(levelRow, "GameFontHighlightSmall", "text")
 	view.level:SetPoint("LEFT", down, "RIGHT", 6, 0)
-	local up = Skin.GlyphButton(levelRow, "chevron", 12, function() return Pad() and L.LEVEL_UP_PAD or L.LEVEL_UP end,
+	local up = Skin.GlyphButton(levelRow, "plus", 12, function() return Pad() and L.LEVEL_UP_PAD or L.LEVEL_UP end,
 		function() Step(IsShiftKeyDown() and 10 or 1) end)
 	up:SetPoint("LEFT", view.level, "RIGHT", 6, 0)
 	-- (a controller has no Shift here: its left button jumps ten levels)
@@ -758,6 +830,11 @@ local function MakePanel()
 	view.body:SetJustifyV("TOP")
 	view.body:SetSpacing(3)
 	view.orderRows = {}
+	-- (where a dragged row would go: a thin blue line between two rows)
+	view.dropLine = view.content:CreateTexture(nil, "OVERLAY")
+	view.dropLine:SetHeight(2)
+	view.dropLine:SetColorTexture(BLUE[1], BLUE[2], BLUE[3], 0.9)
+	view.dropLine:Hide()
 	view.scroll:EnableMouseWheel(true)
 	view.scroll:SetScript("OnMouseWheel", function(self, delta)
 		local most = math.max(0, (view.contentHeight or 0) - self:GetHeight())
@@ -807,8 +884,9 @@ function ns.AttachTalents()
 	MakePanel()
 	MakeButtons()
 	local function Shown()
+		-- (Wanderer off: nothing of Training on the game's window, its button neither)
+		frame.wandererCalc:SetShown(On())
 		if not On() then return panel:Hide() end
-		frame.wandererCalc:Show()
 		local settings = Settings()
 		if settings.talentsPanel ~= false then panel:Show() end
 		C_Timer.After(0, DrawAll)

@@ -56,10 +56,14 @@ end
 local function Window()
 	if window then return window end
 	window = Skin.CreateWindow("WandererTrainingWindow", "MEDIUM")
+	Skin.Sounds(window, Skin.SOUNDS.open, Skin.SOUNDS.close)
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 20 }, "trainingPos")
 	window:SetSize(960, 720)
-	-- (the page says what it is in the heading: "Wanderer", then what your trainers have for you)
-	local _, _, margin = ns.Header(window, L.HEADING)
+	-- (the heading: "Wanderer", the window's name as the menu says it, then quietly what your trainers have for you)
+	local _, title, margin = ns.Header(window, L.TITLE)
+	local sub = Skin.Text(window, "GameFontHighlightSmall", "muted")
+	sub:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 10, 1)
+	sub:SetText(L.HEADING)
 	-- (the heading's "?": what this page is)
 	if Skin.Help then Skin.Help(window, L.BOOK_HELP, "HEADING") end
 	window.content = CreateFrame("Frame", nil, window)

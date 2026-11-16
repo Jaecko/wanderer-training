@@ -12,6 +12,12 @@ local L = ns.L
 local W = Wanderer
 local U = W and W.Util
 local Skin = W and W.Skin
+-- (the game's modified clicks on a link: Shift links it in the chat, Ctrl tries an item on; true when done. An older
+-- Wanderer has no Util.ItemClick)
+local ItemClick = U and rawget(U, "ItemClick") or function(link)
+	if link and IsModifiedClick() and HandleModifiedItemClick then HandleModifiedItemClick(link) return true end
+end
+ns.ItemClick = ItemClick -- (the trainers' window too)
 
 local WIDTH, HEIGHT = 880, 620
 local LEFT = 500 -- the list
@@ -145,7 +151,7 @@ function ns.EntryActions(entry, opts)
 	if opts.learn then actions[#actions + 1] = { text = L.LEARN_ONE, glyph = "chevron", hint = L.LEARN_DESC, onClick = opts.learn } end
 	if entry and entry.status ~= "known" then
 		if entry.ignored then
-			actions[#actions + 1] = { text = L.COUNT_AGAIN, glyph = "back", hint = L.COUNT_AGAIN_DESC, onClick = function() ns.Ignore(entry.key, false) end }
+			actions[#actions + 1] = { text = L.COUNT_AGAIN, glyph = "undo", hint = L.COUNT_AGAIN_DESC, onClick = function() ns.Ignore(entry.key, false) end }
 		else
 			actions[#actions + 1] = { text = L.IGNORE, glyph = "close", hint = L.IGNORE_DESC, onClick = function() ns.Ignore(entry.key, true) end }
 		end
@@ -273,6 +279,12 @@ local function Gather()
 	Section(L.SECTION_KNOWN, groups.known)
 end
 
+-- The skill a row asks: its name and rank when the name is known ("Poisons 120"), else the rank alone.
+function ns.SkillChip(rank, name)
+	if type(name) == "string" and name ~= "" then return L.CHIP_SKILL_NAMED:format(name, rank) end
+	return L.CHIP_SKILL:format(rank)
+end
+
 -- A row's chip (what is particular about it), the same on the page and at the trainer (service: the trainer's
 -- line, for its own states: learned, a later level, something else first).
 function ns.EntryChip(entry, service)
@@ -280,8 +292,10 @@ function ns.EntryChip(entry, service)
 		if service.state == "used" then return nil end
 		if service.later then return L.SECTION_LEVEL:format(service.later), "grey" end
 		if service.state == "unavailable" then
-			if service.skill then return L.CHIP_SKILL:format(service.skill), "grey" end
-			return L.CHIP_MISSING, "gold"
+			if service.skill then return ns.SkillChip(service.skill, service.skillName), "grey" end
+			if service.earlier then return L.CHIP_MISSING, "gold" end
+			-- (something else the game asks: its tooltip says what)
+			return L.CHIP_NEEDS, "grey"
 		end
 		if not entry then return nil end
 	end
@@ -290,7 +304,7 @@ function ns.EntryChip(entry, service)
 	if entry.offSpec then return L.CHIP_OFFSPEC, "grey" end
 	if entry.forced and entry.status ~= "known" then return L.CHIP_COUNTED, "gold" end
 	if entry.status == "talent" then return L.CHIP_TALENT, "blue" end
-	if entry.status == "missing" and entry.skill then return L.CHIP_SKILL:format(entry.skill), "gold" end
+	if entry.status == "missing" and entry.skill then return ns.SkillChip(entry.skill, entry.skillName), "gold" end
 	if entry.status == "missing" then return L.CHIP_MISSING, "gold" end
 	return nil
 end
@@ -681,6 +695,8 @@ function ns.BuildPage()
 		width = LEFT, rows = 30, rowHeight = ROW, titles = false, padRight = true,
 		columns = { { key = "price", width = 80 } },
 		onClick = function(row, mouse)
+			-- (Shift: the spell linked in the chat, as in the game's spellbook)
+			if mouse == "LeftButton" and row.entry and ItemClick(row.entry.link) then return end
 			if row.entry and mouse == "RightButton" then ns.EntryMenu(row.entry) end
 		end,
 		onDraw = DrawList,
@@ -921,7 +937,7 @@ function ns.GoalMenu(owner)
 	if goal then
 		choices[1] = { text = L.GOAL_AMOUNT, glyph = "chevron", right = U.CoinsWords(goal.amount),
 			onClick = function() AskAmount(goal.name, goal.preset, goal.amount) end }
-		choices[2] = { text = L.GOAL_RENAME, glyph = "chevron", onClick = function()
+		choices[2] = { text = L.GOAL_RENAME, glyph = "pencil", onClick = function()
 			Skin.AskText(L.GOAL_NAME_ASK, goal.name, function(text) ns.SetGoal(text, goal.amount, goal.preset) end, 40)
 		end }
 		choices[3] = { text = L.GOAL_CLEAR, glyph = "close", role = "muted", onClick = function() ns.SetGoal(nil) end }

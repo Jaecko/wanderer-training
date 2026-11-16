@@ -269,6 +269,27 @@ function ns.PlanRemove(node)
 	return false
 end
 
+-- A point moved in the order, from its place to another: kept only when every point still follows the rules
+-- where it now stands. When not: false, the first point that would no longer fit, why, what it needs, and the
+-- plan's points by row just before it.
+function ns.PlanMove(from, to)
+	if not ns.TalentTreeNow() then return false end
+	local steps = Copy(ns.PlanSteps())
+	if not steps[from] or not steps[to] or from == to then return false end
+	table.insert(steps, to, table.remove(steps, from))
+	local ranks, rows = {}, { {}, {}, {} }
+	for index, id in ipairs(steps) do
+		local node = tree.byId[id]
+		if not node then return false end
+		local ok, why, need = ns.PlanAllowed(node, ranks, rows, index - 1)
+		if not ok then return false, node, why, need, rows end
+		ranks[id] = (ranks[id] or 0) + 1
+		rows[node.branch][node.tier] = (rows[node.branch][node.tier] or 0) + 1
+	end
+	ns.SetPlanSteps(steps)
+	return true
+end
+
 -- The plan started from your talents as they are.
 function ns.PlanFromYours()
 	if not ns.TalentTreeNow() then return false end
