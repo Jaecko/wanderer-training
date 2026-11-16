@@ -35,6 +35,20 @@ local Settings = ns.Settings
 local function Replaces() local settings = Settings() return settings ~= nil and settings.trainer ~= false end
 local function Money() return U.Clean(U.Safe(GetMoney)) or 0 end
 
+-- A pet trainer (a hunter's pet skills): its prices are training points, never gold (the game's window shows them
+-- apart and counts them against the pet's points left).
+local function PetTrainer()
+	local kinds = Enum and Enum.TrainerType
+	if not (kinds and kinds.Pet and _G.C_Trainer and _G.C_Trainer.GetTrainerType) then return false end
+	return U.Clean(U.Safe(_G.C_Trainer.GetTrainerType)) == kinds.Pet
+end
+local function PointsLeft()
+	if not (_G.C_PetInfo and _G.C_PetInfo.GetPetTrainingPoints) then return 0 end
+	local total, used = U.Safe(_G.C_PetInfo.GetPetTrainingPoints)
+	return math.max(0, (tonumber(U.Clean(total)) or 0) - (tonumber(U.Clean(used)) or 0))
+end
+local function Points(points) return (_G.TRAINING_POINTS_ABBREV or "%s TP"):format(tostring(points)) end
+
 -- The trainer's services -------------------------------------------------------------------------------------
 
 -- (a trainer's service read as Wanderer reads it: name, rank, state, header open)
@@ -115,15 +129,20 @@ local function Read()
 	local byName = Entries()
 	local mine = false
 	local level = U.Clean(U.Safe(UnitLevel, "player")) or 1
+	local pet = PetTrainer()
 	for index = 1, (U.Clean(U.Safe(GetNumTrainerServices)) or 0) do
 		local name, sub, state = ServiceInfo(index)
 		if name and state and state ~= "header" then
 			local service = {
 				index = index, name = name, sub = sub ~= "" and sub or nil, state = state,
 				icon = U.Clean(U.Safe(GetTrainerServiceIcon, index)),
-				cost = U.Clean(U.Safe(GetTrainerServiceCost, index)) or 0,
 				level = U.Clean(U.Safe(GetTrainerServiceLevelReq, index)) or 0,
 			}
+			local cost, profession = U.Safe(GetTrainerServiceCost, index)
+			cost = tonumber(U.Clean(cost)) or 0
+			-- (a pet's skill: training points, no gold; a new profession: asked first, as the game does)
+			if pet then service.points, cost = cost, 0 end
+			service.cost, service.profession = cost, U.Clean(profession) == true or nil
 			local skillName, skillRank, hasSkill = U.Safe(GetTrainerServiceSkillReq, index)
 			if U.Clean(skillName) and not U.Clean(hasSkill) then
 				service.skill, service.skillName = U.Clean(skillRank), U.Clean(skillName)
@@ -173,6 +192,20 @@ local function Plan(onlyCounted)
 		if service.state == "available" and (not onlyCounted or Counts(service)) then wanted[#wanted + 1] = service end
 	end
 	local chosen, spent, total = U.TrainerPlan(wanted)
+	-- (at a pet trainer: as far as the pet's training points go, the cheapest first)
+	if wanted[1] and wanted[1].points then
+		local left, kept = PointsLeft(), {}
+		table.sort(chosen, function(a, b) return (a.points or 0) < (b.points or 0) end)
+		spent, total = 0, 0
+		for _, service in ipairs(wanted) do total = total + (service.points or 0) end
+		for _, service in ipairs(chosen) do
+			if spent + (service.points or 0) <= left then
+				kept[#kept + 1] = service
+				spent = spent + (service.points or 0)
+			end
+		end
+		chosen = kept
+	end
 	return chosen, spent, wanted, total
 end
 
@@ -184,8 +217,24 @@ local purchase = 0 -- one chain of purchases at a time
 local buying = false -- a chain under way (the buttons stay off)
 -- (a purchase answered late, or a chain still under way: no second one over it)
 local function Waiting() return buying or (waiting ~= nil and GetTime() < waiting) end
+local Learn -- (below: the purchase itself)
 local function Buy(chosen)
 	if not chosen[1] or buying then return end
+	-- A new profession among them: asked first, in the game's own words (the game's window asks it too).
+	local first, second = U.Safe(GetProfessions)
+	if not U.Clean(second) then
+		for _, service in ipairs(chosen) do
+			local text = service.profession and (U.Clean(first) and _G.PROFESSION_CONFIRMATION2 or _G.PROFESSION_CONFIRMATION1)
+			if text then
+				local line = U.Clean(U.Safe(_G.GetTrainerServiceSkillLine, service.index)) or service.name
+				return Skin.Ask(text:format(line), function() Learn(chosen) end)
+			end
+		end
+	end
+	Learn(chosen)
+end
+Learn = function(chosen)
+	if not chosen[1] or buying or not atTrainer then return end
 	view.learn.plan, view.all.plan = nil, nil
 	view.learn:SetEnabled(false)
 	view.all:SetEnabled(false)
@@ -334,7 +383,8 @@ local function DrawList()
 		local service = row and row.service
 		local values, chip, tone, actionText, action
 		if service then
-			local price = service.state == "used" and "" or service.cost > 0 and U.Coins(service.cost) or "-"
+			local price = service.state == "used" and "" or (service.points or 0) > 0 and Points(service.points)
+				or service.cost > 0 and U.Coins(service.cost) or "-"
 			values = { price = price }
 			chip, tone = ns.EntryChip(service.entry, service)
 			if not chip and Aside(service) then chip, tone = L.CHIP_IGNORED, "grey" end
@@ -392,14 +442,15 @@ local function DrawRight(class)
 	view.learn:SetEnabled(#chosen > 0 and not Waiting())
 	view.learn.plan = chosen
 	-- What it costs, and what is left after (or how far your gold goes).
-	view.cost.value:SetText(total > 0 and U.Coins(total) or "-")
+	local pet = wanted[1] ~= nil and wanted[1].points ~= nil
+	view.cost.value:SetText(total <= 0 and "-" or pet and Points(total) or U.Coins(total))
 	local money = Money()
 	if count == 0 then
 		view.note:SetText(L.TRAINER_NOTHING)
 	elseif #chosen < count then
 		view.note:SetText(L.TRAINER_SHORT:format(#chosen, count))
 	else
-		view.note:SetText(L.TRAINER_LEFT:format(U.Coins(money - spent)))
+		view.note:SetText(L.TRAINER_LEFT:format(pet and Points(PointsLeft() - spent) or U.Coins(money - spent)))
 	end
 	-- Everything, outside what you play included.
 	local all, _, everything = Plan(false)
@@ -439,8 +490,18 @@ local GiveBack -- (below: the game's window back when ours fails)
 
 local function Draw()
 	local class = Read()
-	view.title:SetText(U.Clean(U.Safe(UnitName, "npc")) or L.TRAINER_TITLE)
-	view.money:SetText(U.Coins(Money()))
+	-- (at a profession's trainer, your rank in it after the name, as the game's window shows it over its list)
+	local title = U.Clean(U.Safe(UnitName, "npc")) or L.TRAINER_TITLE
+	local rank, top, bonus = U.Safe(_G.GetTrainerTradeskillRankValues)
+	rank, top, bonus = tonumber(U.Clean(rank)), tonumber(U.Clean(top)), tonumber(U.Clean(bonus)) or 0
+	if rank and top and rank > 0 and _G.TRADESKILL_RANK then
+		local words = bonus > 0 and _G.TRADESKILL_RANK_WITH_MODIFIER and _G.TRADESKILL_RANK_WITH_MODIFIER:format(rank, bonus, top)
+			or _G.TRADESKILL_RANK:format(rank, top)
+		title = title .. "   " .. Skin.Colorize(words, "muted")
+	end
+	view.title:SetText(title)
+	-- (at a pet trainer, the pet's training points left beside your gold, as the game's window shows them)
+	view.money:SetText(U.Coins(Money()) .. (PetTrainer() and ("    " .. Points(PointsLeft())) or ""))
 	Gather(class)
 	DrawList()
 	DrawWays(class)
