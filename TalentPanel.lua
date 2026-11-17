@@ -660,7 +660,10 @@ local function MakePanel()
 	panel:SetWidth(PANEL_WIDTH)
 	panel:EnableMouse(true)
 	panel:SetClampedToScreen(true)
-	panel:SetPoint("TOPLEFT", _G.PlayerSpellsFrame, "TOPRIGHT", 6, 0)
+	-- (the game look: the game's frame as its window's, its name in the bar, the cross there; the bar level with the
+	-- top of the game's talents)
+	if GameLook() and Skin.GameFrame then Skin.GameFrame(panel) end
+	panel:SetPoint("TOPLEFT", _G.PlayerSpellsFrame, "TOPRIGHT", 6, panel.gameArt and -(Skin.GAME_BAR or 22) or 0)
 	panel:SetPoint("BOTTOMLEFT", _G.PlayerSpellsFrame, "BOTTOMRIGHT", 6, 0)
 	Skin.CloseButton(panel, function()
 		local settings = Settings()
