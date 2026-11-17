@@ -669,6 +669,11 @@ local function MakePanel()
 		panel:Hide()
 	end)
 	local _, title, margin = Skin.Header(panel, "Wanderer", L.CALC_TITLE, { settings = "ext:training" })
+	-- (the game look beside the game's window, no game's bar over it: the cross in its corner, the cog left of it)
+	if GameLook() and not panel.gameArt and panel.cog and panel.closeButton then
+		panel.cog:ClearAllPoints()
+		panel.cog:SetPoint("RIGHT", panel.closeButton, "LEFT", -2, 0)
+	end
 	-- (under a controller: Simulate opens your own planner, its words then)
 	local help = Skin.Help(panel, L.CALC_HELP, "HEADING")
 	if help then
@@ -683,7 +688,9 @@ local function MakePanel()
 		for index, plan in ipairs(ns.PlanStore().list) do list[#list + 1] = { id = index, label = plan.name } end
 		return list
 	end, function() return ns.PlanStore().chosen end, function(index) ns.ChoosePlan(index) end, nil, 150, 200, L.PLAN_CHOOSE_DESC)
-	view.plans:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -12)
+	-- (the game look: the name in the game's bar, the plan on the line of the cog)
+	if GameLook() then view.plans:SetPoint("LEFT", panel, "TOPLEFT", margin, -14)
+	else view.plans:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -12) end
 	view.undo = Skin.GlyphButton(panel, "undo", 14, L.UNDO, function() ns.PlanUndo() end)
 	view.undo:SetPoint("LEFT", view.plans, "RIGHT", 8, 0)
 	view.redo = Skin.GlyphButton(panel, "undo", 14, L.REDO, function() ns.PlanRedo() end)
@@ -742,7 +749,8 @@ local function MakePanel()
 	view.tabs:Select(tab)
 	local rule = Skin.Rule(panel)
 	if GameLook() then Skin.GameAtlas(rule, "Options_HorizontalDivider") end
-	rule:SetPoint("TOPLEFT", view.tabs, "BOTTOMLEFT", 0, -2)
+	-- (the game look: the game's tabs stand on it)
+	rule:SetPoint("TOPLEFT", view.tabs, "BOTTOMLEFT", 0, GameLook() and 0 or -2)
 	rule:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
 	-- Each page's buttons, at the foot.
 	view.rows = {}

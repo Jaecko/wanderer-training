@@ -14,6 +14,7 @@ local Skin = W and W.Skin
 
 local CELL, GAP = 36, 10 -- a talent's square, the room around it
 local BRANCH_GAP = 28
+local GAME_TOP = 8 -- (the game look: the branches' names on the line of the "?")
 local PLANNED = Skin.COLORS.blue
 
 local window, view
@@ -76,7 +77,7 @@ local function Draw()
 	end
 	for index = #tree.nodes + 1, #view.buttons do view.buttons[index]:Hide() end
 	view:SetSize(left[3] + columns[3] * (CELL + GAP), 26 + tiers * (CELL + GAP))
-	window:SetSize(view:GetWidth() + Skin.Margin() * 2 + 16, view:GetHeight() + 160)
+	window:SetSize(view:GetWidth() + Skin.Margin() * 2 + 16, view:GetHeight() + 160 - (window.gameShrink or 0))
 	-- Under the branches: the plan's name and count, the next talent.
 	local node, rank, level = ns.NextTalent()
 	local parts = { ns.CurrentPlan().name, L.PLAN_POINTS:format(#ns.PlanSteps(), ns.TALENT_MOST) }
@@ -90,7 +91,14 @@ local function Create()
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 40 }, "trainingTalentsPos")
 	local _, title, margin = ns.Header(window, L.PLAN_TITLE)
 	view = CreateFrame("Frame", nil, window)
-	view:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 8, -16)
+	if Skin.GameWindows and Skin.GameWindows() then
+		-- (the game look: the name in the game's bar, the branches from the window's top; as much less tall as
+		-- the heading was: its kicker and title, 45 under the margin, and the room under them)
+		view:SetPoint("TOPLEFT", window, "TOPLEFT", margin + 8, -GAME_TOP)
+		window.gameShrink = margin + 45 - GAME_TOP
+	else
+		view:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 8, -16)
+	end
 	view.titles, view.buttons = {}, {}
 	for branch = 1, 3 do view.titles[branch] = Skin.Text(view, "GameFontNormal", "gold") end
 	function view.MakeButton()

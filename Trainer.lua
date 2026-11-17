@@ -15,6 +15,7 @@ local Skin = W and W.Skin
 local ItemClick = ns.ItemClick
 
 local WIDTH, HEIGHT = 900, 600
+local GAME_RULE = 30 -- (the game look: the rule right under the line of the cog)
 local LIST = 520 -- the list's width
 local GAP = 30
 -- (the kit's row: the list fits the window; read as it is, an older Wanderer has none)
@@ -522,20 +523,26 @@ local function Create()
 	window = Skin.CreateWindow("WandererTrainingTrainer", "MEDIUM")
 	Skin.Sounds(window, Skin.SOUNDS.open, Skin.SOUNDS.close)
 	Skin.Dress(window, { "TOPLEFT", UIParent, "TOPLEFT", 24, -110 }, "trainingTrainerPos")
-	window:SetSize(WIDTH, HEIGHT)
 	local _, title, margin = ns.Header(window, L.TRAINER_TITLE, 10, "GameFontNormalLarge")
+	-- (the game look: the name in the game's bar, the money and the game's window on the line of the cog, the rule
+	-- right under it; the window as much less tall)
+	local gameLook = Skin.GameWindows and Skin.GameWindows()
+	local ruleTop = gameLook and GAME_RULE or (margin + 50)
+	window:SetSize(WIDTH, HEIGHT - (margin + 50 - ruleTop))
 	-- (the heading's "?": what this window offers at the trainer)
 	if Skin.Help then Skin.Help(window, L.TRAINER_HELP, "HEADING") end
 	view.title = title
 	-- Your money, and the game's own window, on the right (the cross after them).
 	local game = Skin.SmallButton(window, L.GAME_WINDOW, function() ns.UseGameTrainer() end, L.GAME_WINDOW_DESC)
-	game:SetPoint("TOPRIGHT", window, "TOPRIGHT", -(margin + 26), -margin + 2)
+	if gameLook and window.help then game:SetPoint("RIGHT", window.help, "LEFT", -8, 0)
+	elseif gameLook then game:SetPoint("TOPRIGHT", window, "TOPRIGHT", -54, -3)
+	else game:SetPoint("TOPRIGHT", window, "TOPRIGHT", -(margin + 26), -margin + 2) end
 	view.money = Skin.Text(window, "GameTooltipText", "soft")
 	view.money:SetPoint("RIGHT", game, "LEFT", -18, 0)
 	local rule = Skin.Rule(window)
 	-- (the game look: the game's own divider)
-	if Skin.GameWindows and Skin.GameWindows() then Skin.GameAtlas(rule, "Options_HorizontalDivider") end
-	rule:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -(margin + 50))
+	if gameLook then Skin.GameAtlas(rule, "Options_HorizontalDivider") end
+	rule:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -ruleTop)
 	rule:SetPoint("RIGHT", window, "RIGHT", -margin, 0)
 	-- On the left, everything the trainer teaches.
 	list = Skin.Table(window, {

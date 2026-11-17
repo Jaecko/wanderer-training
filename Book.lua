@@ -11,6 +11,7 @@ local U = W and W.Util
 local Skin = W and W.Skin
 
 local ICON = "Interface\\Icons\\INV_Misc_Book_07"
+local GAME_TOP = 30 -- (the game look: the page right under the line of the cog)
 
 local launcher, window
 local attention = false
@@ -58,16 +59,20 @@ local function Window()
 	window = Skin.CreateWindow("WandererTrainingWindow", "MEDIUM")
 	Skin.Sounds(window, Skin.SOUNDS.open, Skin.SOUNDS.close)
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 20 }, "trainingPos")
-	window:SetSize(960, 720)
 	-- (the heading: "Wanderer", the window's name as the menu says it, then quietly what your trainers have for you)
 	local _, title, margin = ns.Header(window, L.TITLE)
+	-- (the game look: the name in the game's bar, these words on the line of the cog, the page right under it)
+	local game = Skin.GameWindows and Skin.GameWindows()
+	local top = game and GAME_TOP or (margin + 40)
+	window:SetSize(960, 720 - (margin + 40 - top))
 	local sub = Skin.Text(window, "GameFontHighlightSmall", "muted")
-	sub:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 10, 1)
+	if game then sub:SetPoint("LEFT", window, "TOPLEFT", margin, -14)
+	else sub:SetPoint("BOTTOMLEFT", title, "BOTTOMRIGHT", 10, 1) end
 	sub:SetText(L.HEADING)
 	-- (the heading's "?": what this page is)
 	if Skin.Help then Skin.Help(window, L.BOOK_HELP, "HEADING") end
 	window.content = CreateFrame("Frame", nil, window)
-	window.content:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -(margin + 40))
+	window.content:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -top)
 	window.content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -margin, margin)
 	window:HookScript("OnShow", function(self)
 		self:SetScale(Skin.FitScale(self))
