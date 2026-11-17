@@ -17,6 +17,8 @@ local Safe, Clean = U and U.Safe, U and U.Clean
 
 local PANEL_WIDTH = 360
 local BLUE = Skin and Skin.COLORS.blue
+-- (the game look drawn: the game's own rows and divider in the calculator)
+local function GameLook() return Skin ~= nil and Skin.GameWindows ~= nil and Skin.GameWindows() end
 local GOLD = Skin and Skin.COLORS.gold
 
 local frame -- the game's talent window (PlayerSpellsFrame.TalentsFrame)
@@ -449,7 +451,7 @@ local function OrderRow(index)
 	row.done:SetVertexColor(GOLD[1], GOLD[2], GOLD[3])
 	local hover = row:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints()
-	hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+	if GameLook() then Skin.HoverTint(hover) else hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05) end
 	-- Moved: dragged to another place, or one place up or down with its arrows.
 	row.up = Skin.GlyphButton(row, "up", 10, L.MOVE_UP, function(self) MovePoint(self:GetParent().index, self:GetParent().index - 1) end)
 	row.up:SetPoint("RIGHT", row, "RIGHT", -22, 0)
@@ -523,10 +525,16 @@ local function DrawOrder()
 		row.rank:SetText(rank .. "/" .. node.most)
 		row.done:SetShown(taken)
 		Arrows(row, row:IsMouseOver())
-		row.bar:SetShown(isNext)
+		-- (the game look: the next one on the game's chosen row, no bar of Wanderer's beside it, no stripes)
+		local game = GameLook()
+		row.bar:SetShown(isNext and not game)
 		if isNext then
-			row.ground:SetColorTexture(BLUE[1], BLUE[2], BLUE[3], 0.16)
+			if game then Skin.ChosenTint(row.ground) else row.ground:SetColorTexture(BLUE[1], BLUE[2], BLUE[3], 0.16) end
 			row.name:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+		elseif game then
+			row.ground:SetColorTexture(0, 0, 0, 0)
+			local c = Skin.COLORS[taken and "muted" or "text"]
+			row.name:SetTextColor(c[1], c[2], c[3])
 		else
 			row.ground:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.025 or 0)
 			local c = Skin.COLORS[taken and "muted" or "text"]
@@ -733,6 +741,7 @@ local function MakePanel()
 	view.tabs:Layout()
 	view.tabs:Select(tab)
 	local rule = Skin.Rule(panel)
+	if GameLook() then Skin.GameAtlas(rule, "Options_HorizontalDivider") end
 	rule:SetPoint("TOPLEFT", view.tabs, "BOTTOMLEFT", 0, -2)
 	rule:SetPoint("RIGHT", panel, "RIGHT", -margin, 0)
 	-- Each page's buttons, at the foot.

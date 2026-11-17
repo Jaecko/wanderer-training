@@ -48,7 +48,14 @@ local function Ink(text, color)
 	return U.Colorize(text, color[1], color[2], color[3])
 end
 local function Paint(region, color) region:SetTextColor(color[1], color[2], color[3]) end
+-- (the game look drawn: the game's own fonts and pictures in place of the book's)
+local function GameLook() return Skin ~= nil and Skin.GameWindows ~= nil and Skin.GameWindows() end
 local function Lettering(region, size)
+	-- (the game look: the game's large gold titles, as in its own windows)
+	if GameLook() and _G.GameFontNormalLarge then
+		region:SetFontObject(Skin.FontFor("GameFontNormalLarge"))
+		return
+	end
 	local font = LETTERING
 	if NON_LATIN[GetLocale and GetLocale() or "enUS"] then font = _G.GameFontNormal and _G.GameFontNormal:GetFont() or "Fonts\\FRIZQT__.TTF" end
 	region:SetFont(font, size, "")
@@ -65,6 +72,8 @@ local function Rule(parent)
 	return rule
 end
 local function Tint(rule)
+	-- (the game look: the game's own divider, from its options' list)
+	if GameLook() and Skin.GameAtlas(rule, "Options_HorizontalDivider") then return end
 	local c = ink.rule
 	Skin.FadingRule(rule, c[4], false, c)
 end
@@ -368,7 +377,7 @@ local function DrawList()
 			chip, tone = ns.EntryChip(entry)
 		end
 		line:Fill(row, false, values, chip, tone)
-		line.hover:SetColorTexture(ink.hover[1], ink.hover[2], ink.hover[3], ink.hover[4])
+		if GameLook() then Skin.HoverTint(line.hover) else line.hover:SetColorTexture(ink.hover[1], ink.hover[2], ink.hover[3], ink.hover[4]) end
 		-- Its "..." (none on a title).
 		ns.ShowMore(line, entry ~= nil)
 		ns.MarkFound(line, entry ~= nil and query ~= "" and ns.Found(entry.name, query))
@@ -517,7 +526,13 @@ local function Tile(index)
 	tile.price:SetPoint("TOP", tile.icon, "BOTTOM", 0, -3)
 	local hover = tile:CreateTexture(nil, "HIGHLIGHT")
 	hover:SetAllPoints(tile.icon)
-	hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+	-- (the game look: the game's own light over an icon, as on its buttons)
+	if GameLook() then
+		hover:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+		hover:SetBlendMode("ADD")
+	else
+		hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+	end
 	tile:RegisterForClicks("LeftButtonUp", "RightButtonUp") tile.padRight = true
 	tile:SetScript("OnClick", function(self, mouse)
 		local entry = self.entry

@@ -107,7 +107,13 @@ local function Create()
 		button.rank:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
 		local hover = button:CreateTexture(nil, "HIGHLIGHT")
 		hover:SetAllPoints(button.icon)
-		hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+		-- (the game look: the game's own light over an icon, as on its talent buttons)
+		if Skin.GameWindows and Skin.GameWindows() then
+			hover:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+			hover:SetBlendMode("ADD")
+		else
+			hover:SetColorTexture(1, 1, 1, Skin.HOVER or 0.05)
+		end
 		button:SetScript("OnClick", function(self, mouse)
 			local ok
 			if mouse == "RightButton" then ok = ns.PlanRemove(self.node) else ok = ns.PlanAdd(self.node) end

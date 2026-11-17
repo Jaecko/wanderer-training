@@ -533,6 +533,8 @@ local function Create()
 	view.money = Skin.Text(window, "GameTooltipText", "soft")
 	view.money:SetPoint("RIGHT", game, "LEFT", -18, 0)
 	local rule = Skin.Rule(window)
+	-- (the game look: the game's own divider)
+	if Skin.GameWindows and Skin.GameWindows() then Skin.GameAtlas(rule, "Options_HorizontalDivider") end
 	rule:SetPoint("TOPLEFT", window, "TOPLEFT", margin, -(margin + 50))
 	rule:SetPoint("RIGHT", window, "RIGHT", -margin, 0)
 	-- On the left, everything the trainer teaches.
