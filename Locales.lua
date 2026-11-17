@@ -300,6 +300,7 @@ local LOCALES = {
 		MOVE_REFUSED = "Not possible: %s could no longer be taken there. %s",
 		CHIP_NEEDS = "Requirement missing",
 		CHIP_SKILL_NAMED = "%s %d",
+		PLAN_PAD_KEY = "The calculator also opens beside the game's talents: open them first with their key.",
 	},
 }
 ns.LOCALES = LOCALES

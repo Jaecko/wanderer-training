@@ -296,4 +296,5 @@ ns.LOCALES.ptBR = {
 	MOVE_REFUSED = "Impossível: %s não poderia mais ser pego ali. %s",
 	CHIP_NEEDS = "Falta um requisito",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "A calculadora também abre ao lado dos talentos do jogo: abra-os primeiro com a tecla deles.",
 }

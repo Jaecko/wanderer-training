@@ -296,4 +296,5 @@ ns.LOCALES.frFR = {
 	MOVE_REFUSED = "Impossible : %s ne pourrait plus être pris à cet endroit. %s",
 	CHIP_NEEDS = "Condition manquante",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "Le calculateur s'ouvre aussi à côté des talents du jeu : ouvrez-les d'abord avec leur touche.",
 }

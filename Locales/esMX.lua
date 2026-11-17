@@ -296,4 +296,5 @@ ns.LOCALES.esES = {
 	MOVE_REFUSED = "No es posible: %s ya no podría tomarse ahí. %s",
 	CHIP_NEEDS = "Falta un requisito",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "La calculadora también se abre junto a los talentos del juego: ábrelos primero con su tecla.",
 }

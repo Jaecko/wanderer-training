@@ -296,4 +296,5 @@ ns.LOCALES.itIT = {
 	MOVE_REFUSED = "Impossibile: %s non potrebbe più essere preso lì. %s",
 	CHIP_NEEDS = "Requisito mancante",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "Il calcolatore si apre anche accanto ai talenti del gioco: aprili prima con il loro tasto.",
 }

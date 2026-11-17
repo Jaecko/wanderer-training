@@ -168,6 +168,9 @@ end
 function ns.ToggleTalents()
 	if window and window:IsShown() then return window:Hide() end
 	if ns.OpenTalentCalculator and ns.OpenTalentCalculator() then return end
+	-- (a controller, out of a fight: the game's tree cannot be opened from here, said in a line; its own key opens
+	-- it with the calculator beside it)
+	if U.UsingPad and U.UsingPad() and not (InCombatLockdown and InCombatLockdown()) then W.Print(L.PLAN_PAD_KEY) end
 	if not window then Create() end
 	window:Show()
 end

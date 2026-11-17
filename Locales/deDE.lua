@@ -296,4 +296,5 @@ ns.LOCALES.deDE = {
 	MOVE_REFUSED = "Nicht möglich: %s könnte dort nicht mehr genommen werden. %s",
 	CHIP_NEEDS = "Voraussetzung fehlt",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "Der Rechner öffnet sich auch neben den Talenten des Spiels: öffne sie zuerst mit ihrer Taste.",
 }

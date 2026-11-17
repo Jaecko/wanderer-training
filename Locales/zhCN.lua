@@ -296,4 +296,5 @@ ns.LOCALES.zhCN = {
 	MOVE_REFUSED = "无法移动：%s 在那里将无法加点。%s",
 	CHIP_NEEDS = "条件未满足",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "计算器也会在游戏的天赋窗口旁打开：请先用天赋按键打开它。",
 }

@@ -296,4 +296,5 @@ ns.LOCALES.koKR = {
 	MOVE_REFUSED = "불가능: %s|1을;를; 그곳에서 더 이상 찍을 수 없습니다. %s",
 	CHIP_NEEDS = "조건 미충족",
 	CHIP_SKILL_NAMED = "%s %d",
+	PLAN_PAD_KEY = "계산기는 게임의 특성 창 옆에도 열립니다: 먼저 특성 키로 특성 창을 여세요.",
 }
